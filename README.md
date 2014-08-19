@@ -26,19 +26,23 @@ Help
 <pre>$  ./tilde_enum.py -h
 usage: tilde_enum.py [-h] [-d DIRWORDLIST] [-f] [-o OUT_FILE] [-p PROXY]
                      [-u URL] [-v VERBOSE_LEVEL] [-w WAIT]
+                     [--resume RESUME_STRING] [--dir-only]
 
 Exploits and expands the file names found from the tilde enumeration vuln
 
 optional arguments:
-  -h, --help        show this help message and exit
-  -d DIRWORDLIST    an optional wordlist for directory name content
-  -f                force testing of the server even if the headers do not
-                    report it as an IIS system
-  -o OUT_FILE       Filename to store output
-  -p PROXY          Use a proxy host:port
-  -u URL            URL to scan
-  -v VERBOSE_LEVEL  verbose level of output (0~2)
-  -w WAIT           time in seconds to wait between requests
+  -h, --help            show this help message and exit
+  -d DIRWORDLIST        an optional wordlist for directory name content
+  -f                    force testing of the server even if the headers do not
+                        report it as an IIS system
+  -o OUT_FILE           Filename to store output
+  -p PROXY              Use a proxy host:port
+  -u URL                URL to scan
+  -v VERBOSE_LEVEL      verbose level of output (0~2)
+  -w WAIT               time in seconds to wait between requests
+  --resume RESUME_STRING
+                        Resume from a given name (length <= 6)
+  --dir-only            Search for directories only
 </pre>
 
 

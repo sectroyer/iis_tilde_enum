@@ -62,6 +62,8 @@ def printResult(msg, color='', level=1):
     # level = 1 : Important messages
     # level = 2 : More details
     if args.verbose_level >= level:
+        sys.stdout.write('                                                   \r')
+        sys.stdout.flush()
         if color:
             print color + msg + bcolors.ENDC
         else:
@@ -141,25 +143,9 @@ def initialCheckUrl(url):
     else:
         return response_code
 
-##### Not Using in current version #####
-def searchFileForString(targetstring, filename):
-    # Open the wordlist file (or try to)
-    try:
-        wordlist = open(filename,'r').readlines()
-    except (IOError) :
-        printResult('[!]  [Error] Can\'t read the wordlist file you entered.', bcolors.RED)
-        sys.exit()
-
-    matches = []
-    for line in wordlist:
-        if line.startswith(targetstring.lower()):
-            matches.append(line.rstrip())
-    return matches
-
-
 def checkVulnerableString(url):
     # Set the default string to be IIS6.x
-    check_string = '*~1*/.aspx'
+    check_string = '*~1*/.aspx' if args.directory_only == False else '*~1/.aspx'
 
     # Check if the server is IIS and vuln to tilde directory enumeration
     if args.f:
@@ -175,21 +161,17 @@ def checkVulnerableString(url):
             elif '6.' in server_header.headers['server']:
                 pass # just use the default string already set
         else:
-            printResult('[!]  Error. Server is not reporting that it is IIS.', bcolors.RED)
-            printResult('[!]     (Request error: %s)' % server_header.getcode(), bcolors.RED)
-            printResult('[!]     If you know it is, use the -f flag to force testing and re-run the script. (%s)' % server_header, bcolors.RED)
-            sys.exit()
+            printResult('[!]  Warning. Server is not reporting that it is IIS.', bcolors.RED)
+            printResult('[!]     (Response code: %s)' % server_header.getcode(), bcolors.RED)
     else:
         printResult('[!]  Error. Server is not reporting that it is IIS.', bcolors.RED)
-        printResult('[!]     (Request error: %s)' % server_header.getcode(), bcolors.RED)
-        printResult('[!]     If you know it is, use the -f flag to force testing and re-run the script. (%s)' % server_header, bcolors.RED)
-        sys.exit()
+        printResult('[!]     (Response code: %s)' % server_header.getcode(), bcolors.RED)
 
     # Check to see if the server is vulnerable to the tilde vulnerability
     resp1 = getWebServerResponse(args.url + '~1*/.aspx')
     resp2 = getWebServerResponse(args.url + '*~1*/.aspx')
     if resp1.code != resp2.code:
-        printResult('[+]  The server is vulnerable to the tilde enumeration vulnerability (IIS/5|6.x)..', bcolors.YELLOW)
+        printResult('[+]  The server is vulnerable to the IIS tilde enumeration vulnerability..', bcolors.YELLOW)
     else:
         printResult('[!]  Error. Server is probably NOT vulnerable or given path is wrong.', bcolors.RED)
         printResult('[!]     If you know it is, use the -f flag to force testing and re-run the script.', bcolors.RED)
@@ -204,25 +186,33 @@ def findExtensions(url, filename):
     possible_exts = {}
     found_files = []
     notFound = True
-    for char1 in chars:
-        resp1a = getWebServerResponse(url+filename+'*'+char1+'*/.aspx')
-        if resp1a.code == 404:  # Got the first valid char
-            notFound = False
-            possible_exts[char1] = 1
-            for char2 in chars:
-                resp2a = getWebServerResponse(url+filename+'*'+char1+char2+'*/.aspx')
-                if resp2a.code == 404:  # Got the second valid char
-                    del possible_exts[char1]
-                    possible_exts[char1+char2] = 1
-                    for char3 in chars:
-                        resp3a = getWebServerResponse(url+filename+'*'+char1+char2+char3+'/.aspx')
-                        if resp3a.code == 404:  # Got the third valid char
-                            del possible_exts[char1+char2]
-                            possible_exts[char1+char2+char3] = 1
+    
+    if args.verbose_level:
+        sys.stdout.write("[-]  Enumerating extensions of %s...  \r" % filename)
+        sys.stdout.flush()
+
+    if not args.directory_only:
+        for char1 in chars:
+            resp1a = getWebServerResponse(url+filename+'*'+char1+'*/.aspx')
+            if resp1a.code == 404:  # Got the first valid char
+                notFound = False
+                possible_exts[char1] = 1
+                for char2 in chars:
+                    resp2a = getWebServerResponse(url+filename+'*'+char1+char2+'*/.aspx')
+                    if resp2a.code == 404:  # Got the second valid char
+                        if char1 in possible_exts: del possible_exts[char1]
+                        possible_exts[char1+char2] = 1
+                        for char3 in chars:
+                            resp3a = getWebServerResponse(url+filename+'*'+char1+char2+char3+'/.aspx')
+                            if resp3a.code == 404:  # Got the third valid char
+                                if char1+char2 in possible_exts: del possible_exts[char1+char2]
+                                possible_exts[char1+char2+char3] = 1
 
     # Check for directory anyway
     if confirmDirectory(url, filename):
-        addNewFindings(filename+'/')
+        notFound = False
+        addNewFindings([filename+'/'])
+        printResult('[+]  Found directory:  ' +filename+'/', bcolors.YELLOW)
 
     if notFound:
         printResult('[!]  Something is wrong:  %s%s/ should be a directory, but the response is strange.'%(url,filename), bcolors.RED)
@@ -259,28 +249,37 @@ def counterEnum(url, check_string, found_name):
             break
 
     if lastCounter > 1:
-        printResult('[+]  counterEnum: %s%s counter end with ~%d.'%(url,found_name,lastCounter), bcolors.GREEN, 2)
+        printResult('[+]  counterEnum: %s~1 to ~%d.'%(found_name,lastCounter), bcolors.GREEN, 2)
     for filename in foundNameWithCounter:
         findExtensions(url, filename)
 
-def charEnum(url, check_string, current_found, current_depth):
+def charEnum(url, check_string, current_found):
     # Enumerate character recursively
     notFound = True
-    if current_depth > 6:
+    current_length = len(current_found)
+    if current_length >= 6:
         counterEnum(url, check_string, current_found)
         return
     else:
         # check if there are matched names shorter than 6
-        test_url = url + current_found + '~1*/.aspx'
+        test_url = url + current_found + check_string[1:]
         resp = getWebServerResponse(test_url)
         if resp.code == 404:
             counterEnum(url, check_string, current_found)
             notFound = False
     
     for char in chars:
-        resp = getWebServerResponse(url + current_found + char + check_string)
+        # pass filenames that smaller than resume_string
+        test_name = current_found + char
+        if args.resume_string and test_name < args.resume_string[:current_length+1]: continue
+
+        if args.verbose_level:
+            sys.stdout.write("[-]  charEnum: Enumerating.... %s   \r" % test_name )
+            sys.stdout.flush()
+        
+        resp = getWebServerResponse(url + test_name + check_string)
         if resp.code == 404:
-            charEnum(url, check_string, current_found+char, current_depth+1)
+            charEnum(url, check_string, test_name)
             notFound = False
     if notFound:
         printResult('[!]  Something is wrong:  %s%s[?] cannot continue. Maybe not in searching charcters.'%(url,current_found), bcolors.RED)
@@ -291,269 +290,59 @@ def checkEightDotThreeEnum(url, check_string, dirname='/'):
 
     url = url + dirname
 
-    charEnum(url, check_string, '', 1)
+    charEnum(url, check_string, '')
     printResult('[-]  Finished doing the 8.3 enumeration for %s.' % dirname, bcolors.GREEN)
+    # clear resume string. Since it just work for first directory
+    args.resume_string = ''
     return
 
-##### Not Using in current version #####
-def performLookups(findings, url_good):
-    # Find matches to the filename in our word list
-    for dirname in findings['files'].keys():
-        ext_matches= []
-        for filename in findings['files'][dirname]:
-            if not filename: continue
-            # Break apart the file into filename and extension
-            filename, ext_temp = os.path.splitext(filename)
-            ext = ext_temp.lstrip('.')
-
-            # Go search the user's word list file for matches for the file
-            if len(filename) < 6:
-                printResult('[-]  File name (%s) too short to look up in word list. We will use it to bruteforce.' % filename, bcolors.GREEN)
-                filename_matches.append(filename)
-            else:
-                printResult('[-]  Searching for %s in word list' % filename, bcolors.PURPLE, 2)
-                filename_matches = searchFileForString(filename, args.wordlist)
-
-            # If nothing came back from the search, just try use the original string
-            if not filename_matches:
-                filename_matches.append(filename)
-            printResult('[+]  File name matches for %s are: %s' % (filename, filename_matches), bcolors.PURPLE, 2)
-
-            # Go search the extension word list file for matches for the extension
-            if len(ext) < 3:
-                printResult('[-]  Extension (%s) too short to look up in word list. We will use it to bruteforce.' % ext, bcolors.GREEN)
-                ext_matches.append(ext.lower())
-            else:
-                printResult('[-]  Searching for %s in extension word list' % ext, bcolors.PURPLE, 2)
-                ext_matches = searchFileForString(ext, exts)
-            printResult('[+]  Extension matches for %s are: %s' % (ext, ext_matches), bcolors.PURPLE, 2)
-
-            # Now do the real hard work of cycling through each filename_matches and adding the ext_matches,
-            # do the look up and examine the response codes to see if we found a file.
-            for line in filename_matches:
-                for e in ext_matches:
-                    test_response_code, test_response_length = '', ''
-
-                    if url_good[-1] != '/':
-                        url_to_try = url_good + '/' + line + '.' + e.rstrip()
-                    else:
-                        url_to_try = url_good + line + '.' + e.rstrip()
-                    url_response = getWebServerResponse(url_to_try)
-
-                    # Pull out just the HTTP response code number
-                    if hasattr(url_response, 'code'):
-                        test_response_code = url_response.code
-                        test_response_length = url_response.headers['Content-Length']
-                    elif hasattr(url_response, 'getcode'):
-                        test_response_code = url_response.getcode()
-                        test_response_length = len(url_response.reason())
-                    else:
-                        test_response_code = 0
-
-                    printResult('[+]  URL: %s  -> RESPONSE: %s' % (url_to_try, test_response_code), bcolors.PURPLE, 2)
-
-                    # Here is where we figure out if we found something or just found something odd
-                    if test_response_code == response_code['user_code']:
-                        printResult('[*]  Found file: (Size %s) %s' % (test_response_length, url_to_try))
-                        findings_final.append(url_to_try + '  - Size ' + test_response_length)
-                    elif test_response_code != 404 and test_response_code != 400:
-                        printResult('[?]  URL: (Size %s) %s with Response: %s ' % (test_response_length, url_to_try, url_response))
-                        findings_other.append('HTTP Resp ' + str(test_response_code) + ' - ' + url_to_try + '  - Size ' + test_response_length)
-
-    # Match directory names
-    printResult('[-]  Trying to find directory matches now.', bcolors.GREEN)
-    if args.dirwordlist:
-        printResult('[-]  You used the "-d" option.\n      Using %s for directory name look-ups.' % args.dirwordlist, bcolors.GREEN)
+def printFindings():
+    if len(findings_new):
+        printResult('\n---------- FINAL OUTPUT ------------------------------')
+        for finding in sorted(findings_new):
+            printResult(args.url + finding)
+        printResult('---------- OUTPUT COMPLETE ---------------------------\n\n\n')
     else:
-        printResult('[-]  Using the general wordlist to discover directory names.', bcolors.GREEN)
-        printResult('       If this does not work well, consider using the -d argument and providing a directory name wordlist.', bcolors.GREEN)
-
-    for dirname in findings['dirs']:
-        # Go search the user's word list file for matches for the directory name
-        printResult('[+]  Searching for %s in word list' % dirname, bcolors.PURPLE, 2)
-        if args.dirwordlist:
-            dir_matches = searchFileForString(dirname, args.dirwordlist)
-        else:
-            dir_matches = searchFileForString(dirname, args.wordlist)
-
-        # If nothing came back from the search, just try use the original string
-        if not dir_matches:
-            dir_matches.append(dirname)
-        printResult('[+]  Directory name matches for %s are: %s' % (dirname, dir_matches), bcolors.PURPLE, 2)
-
-        # Now try to guess the live dir name by cycling through each directory name
-        for matches in dir_matches:
-            test_response_code, test_response_length = '', ''
-
-            # Here we check the response to a plain dir request AND one with default files
-            url_to_try = url_good + '/' + matches + '/'
-            url_response = getWebServerResponse(url_to_try)
-
-            # Pull out just the HTTP response code number
-            if hasattr(url_response, 'code'):
-                test_response_code = url_response.code
-                test_response_length = url_response.headers['Content-Length']
-            elif hasattr(url_response, 'getcode'):
-                test_response_code = url_response.getcode()
-                test_response_length = len(url_response.reason())
-            else:
-                test_response_code = 0
-
-            printResult('[+]  URL: %s  -> RESPONSE: %s' % (url_to_try, test_response_code), bcolors.PURPLE, 2)
-
-            # Here is where we figure out if we found  or just found something odd
-            if test_response_code == response_code['user_code']:
-                printResult('[*]  Found directory: (Size %s) %s' % (test_response_length, url_to_try), bcolors.YELLOW)
-                findings_dir_final.append(url_to_try + '  - Size ' + test_response_length)
-            elif test_response_code == 403:
-                printResult('[?]  URL: (Size %s) %s with Response: %s ' % (test_response_length, url_to_try, url_response), bcolors.YELLOW)
-                findings_dir_other.append('HTTP Resp ' + str(test_response_code) + ' - ' + url_to_try + '  - Size ' + test_response_length)
-
-                # Sometimes directories cannot just be requested and we have to know the default file name in it.
-                default_index_files = ['default.asp', 'default.aspx', 'default.htm', 'default.html', 'home.htm', 'home.html',
-                                       'index.asp', 'index.aspx', 'index.cgi', 'index.htm', 'index.html', 'index.php',
-                                       'index.php3', 'index.php4', 'index.php5', 'index.shtml', 'isstart.htm', 'placeholder.html']
-
-                # Cycle through all the default_index_files and see if any of those get us a match
-                # TODO - This does not feel right duplicating the code from above. Should be a method instead
-                for index_file in default_index_files:
-                    test_response_code, test_response_length = '', ''
-
-                    # Here we check the response to a plain dir request AND one with default files
-                    url_to_try = url_good + '/' + matches + '/' + index_file
-                    url_response = getWebServerResponse(url_to_try)
-
-                    # Pull out just the HTTP response code number
-                    if hasattr(url_response, 'code'):
-                        test_response_code = url_response.code
-                        test_response_length = url_response.headers['Content-Length']
-                    elif hasattr(url_response, 'getcode'):
-                        test_response_code = url_response.getcode()
-                        test_response_length = len(url_response.reason())
-                    else:
-                        test_response_code = 0
-
-                    printResult('[+]  URL: %s  -> RESPONSE: %s' % (url_to_try, test_response_code), bcolors.PURPLE, 2)
-
-                    # Here is where we figure out if we found something or just found something odd
-                    if test_response_code == response_code['user_code']:
-                        printResult('[*]  Found directory: (Size %s) %s' % (test_response_length, url_good + '/' + matches))
-                        findings_dir_final.append(url_good + '/' + matches + '  - Size ' + test_response_length)
-
-            elif test_response_code != 404 and test_response_code != 403:
-                printResult('[?]  URL: (Size %s) %s with Response: %s ' % (test_response_length, url_to_try, url_response), bcolors.YELLOW)
-                findings_dir_other.append('HTTP Resp ' + str(test_response_code) + ' - ' + url_to_try + '  - Size ' + test_response_length)
-
+        printResult('[!]  No Result Found!\n\n\n', bcolors.RED)
+        
 
 def main():
-    # Check the User-supplied URL
-    if args.url:
-        if args.url[-1:] != '/':
-            args.url += '/'
-        response_code = initialCheckUrl(args.url)
-    else:
-        printResult('[!]  You need to enter a valid URL for us to test.', bcolors.RED)
+    try:
+        # Check the User-supplied URL
+        if args.url:
+            if args.url[-1:] != '/':
+                args.url += '/'
+            response_code = initialCheckUrl(args.url)
+        else:
+            printResult('[!]  You need to enter a valid URL for us to test.', bcolors.RED)
+            sys.exit()
+            
+        if args.directory_only:
+            printResult('[-]  Directory only mode: on')
+            
+        if args.resume_string:
+            printResult('[-]  Resume from "%s"... characters before this will be ignored.' % args.resume_string)
+
+        if args.wait != 0 :
+            printResult('[-]  User-supplied delay detected. Waiting %s seconds between HTTP requests.' % args.wait)
+
+        printResult('[+]  HTTP Response Codes: %s' % response_code, bcolors.PURPLE, 2)
+
+        # Check to see if the remote server is IIS and vulnerable to the Tilde issue
+        check_string = checkVulnerableString(args.url)
+
+        # Break apart the url
+        url = urlparse(args.url)
+        url_good = url.scheme + '://' + url.netloc + url.path
+
+        # Do the initial search for files in the root of the web server
+        checkEightDotThreeEnum(url.scheme + '://' + url.netloc, check_string, url.path)
+    except KeyboardInterrupt:
+        printFindings()
         sys.exit()
 
-    printResult('[+]  HTTP Response Codes: %s' % response_code, bcolors.PURPLE, 2)
-
-    if args.wait != 0 :
-        printResult('[-]  User-supplied delay detected. Waiting %s seconds between HTTP requests.' % args.wait)
-
-    # Check to see if the remote server is IIS and vulnerable to the Tilde issue
-    check_string = checkVulnerableString(args.url)
-
-    # Break apart the url
-    url = urlparse(args.url)
-    url_good = url.scheme + '://' + url.netloc + url.path
-
-    # Do the initial search for files in the root of the web server
-    checkEightDotThreeEnum(url.scheme + '://' + url.netloc, check_string, url.path)
-    
-    printResult('\n---------- FINAL OUTPUT ------------------------------')
-    for finding in sorted(findings_new):
-        printResult(args.url + finding)
-
-    printResult('---------- OUTPUT COMPLETE ---------------------------\n\n\n')
-    return ########### Stop here
-
-    printResult('Files: %s' % findings['files'], bcolors.PURPLE, 2)
-    printResult('Dirs: %s' % findings['dirs'], bcolors.PURPLE, 2)
-
-    # Start the URL requests to the server
-    printResult('[-]  Now starting the word guessing using word list calls', bcolors.GREEN)
-
-    # So the URL is live and gives 200s back (otherwise script would have exit'd)
-    performLookups(findings, url_good)
-
-    if findings_dir_final:
-        printResult('[-]  Now starting recursive 8.3 enumeration into the directories we found.', bcolors.GREEN)
-
-    # Now that we have all the findings, repeat the above step with any findings that are directories and add those findings to the list
-    for dirname in findings_dir_final:
-        # Strip off the dir
-        url_good = dirname.split()[0]
-
-        printResult('[-]  Diving into the %s dir.' % url_good, bcolors.GREEN)
-
-        # Do the 8.3 discovery for this dir
-        checkEightDotThreeEnum(url_good, check_string)
-
-        # So the URL is live and gives 200s back (otherwise script would have exit'd)
-        performLookups(findings, url_good)
-
-    # Output findings
-    if findings_final:
-        printResult('\n---------- FINAL OUTPUT ------------------------------')
-        printResult('[*]  We found files for you to look at:', bcolors.YELLOW)
-        for out in sorted(findings_final):
-            printResult('[*]      %s' % out, bcolors.CYAN)
-    else:
-        printResult('[ ]  No file full names were discovered. Sorry dude.', bcolors.RED)
-
-    if findings_dir_final:
-        printResult('\n[*]  We found directories for you to look at:', bcolors.YELLOW)
-        for out in sorted(findings_dir_final):
-            printResult('[*]      %s' % out, bcolors.CYAN)
-
-    printResult('\n[*]  Here are all the 8.3 names we found.', bcolors.YELLOW)
-    printResult('[*]  If any of these are 5-6 chars and look like they should work,', bcolors.YELLOW)
-    printResult('        try the file name with the first or second instead of all of them.', bcolors.YELLOW)
-
-    for dirname in findings['files'].keys():
-        for filename in sorted(findings['files'][dirname]):
-            if not filename: continue
-            # Break apart the file into filename and extension
-            filename, ext = os.path.splitext(filename)
-            printResult('[*]      %s://%s%s%s~1%s' % (url.scheme, url.netloc, dirname, filename, ext))
-
-    printResult('\n[*]  Here are all the directory names we found. You may wish to try to guess them yourself too.', bcolors.YELLOW)
-    for dirname in sorted(findings['dirs']):
-        printResult('[?]      %s/%s~1/' % (url.scheme + '://' + url.netloc, dirname))
-
-    if findings_other:
-        printResult('\n[*]  We found URLs you check out. They were not HTTP response code 200s.', bcolors.YELLOW)
-        for out in sorted(findings_other):
-            printResult('[?]      %s' % out, bcolors.DARKCYAN)
-
-    if findings_dir_other:
-
-        # TODO - Implement additional checking for each of the dirs ! Code 200s
-        # Set up the default file names and extensions for main web pages in directories
-        #default_index = [
-        #                    ['default', 'home', 'index', 'isstart', ''],
-        #                    ['.asp', '.aspx', '.htm', '.html', '.php', '.php3', '.php4', '.php5', '.cgi', '.shtml',
-        #                     '.jsp', '.do', '.cfm', '.nsf', '']
-        #                ]
-
-        # Use itertools to combine all the names and extensions
-        #default_files = list(itertools.product(*default_index))
-
-        #+ ''.join(default_name)
-
-        printResult('\n[*]  We found directory URLs you should check out. They were not HTTP response code 200s.', bcolors.YELLOW)
-        for out in sorted(findings_dir_other):
-            printResult('[?]      %s' % out, bcolors.DARKCYAN)
+    printFindings()
+    return
 
 
 #=================================================
@@ -569,6 +358,8 @@ parser.add_argument('-p', dest='proxy',default='', help='Use a proxy host:port')
 parser.add_argument('-u', dest='url', help='URL to scan')
 parser.add_argument('-v', dest='verbose_level', type=int, default=1, help='verbose level of output (0~2)')
 parser.add_argument('-w', dest='wait', default=0, type=float, help='time in seconds to wait between requests')
+parser.add_argument('--resume', dest='resume_string', help='Resume from a given name (length <= 6)')
+parser.add_argument('--dir-only', action='store_true', dest='directory_only', default=False, help='Search for directories only')
 args = parser.parse_args()
 
 # COLORIZATION OF OUTPUT
