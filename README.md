@@ -41,7 +41,7 @@ optional arguments:
   -v VERBOSE_LEVEL      verbose level of output (0~2)
   -w WAIT               time in seconds to wait between requests
   --resume RESUME_STRING
-                        Resume from a given name (length <= 6)
+                        Resume from a given name (length &lt;= 6)
   --dir-only            Search for directories only
 </pre>
 
