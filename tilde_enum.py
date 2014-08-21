@@ -11,6 +11,7 @@ Fork from:  Micah Hoffman (@WebBreacher)
 
 import os
 import sys
+import ctypes
 import argparse
 import random
 import string
@@ -50,6 +51,9 @@ chars = 'abcdefghijklmnopqrstuvwxyz1234567890-_(),'
 # Response codes - user and error
 response_code = {}
 
+# Terminal handler
+std_out_handle = ctypes.windll.kernel32.GetStdHandle(-11)
+
 
 #=================================================
 # Functions & Classes
@@ -65,7 +69,12 @@ def printResult(msg, color='', level=1):
         sys.stdout.write('                                                   \r')
         sys.stdout.flush()
         if color:
-            print color + msg + bcolors.ENDC
+            if os.name == "nt":
+                ctypes.windll.kernel32.SetConsoleTextAttribute(std_out_handle, color)
+                print msg
+                ctypes.windll.kernel32.SetConsoleTextAttribute(std_out_handle, bcolors.ENDC)
+            else:
+                print color + msg + bcolors.ENDC
         else:
             print msg
     if args.out_file:
@@ -388,14 +397,14 @@ if checkOs() == "posix":
 # If we are running on Windows or something like that then define colors as nothing
 else:
     class bcolors:
-        PURPLE = ''
-        CYAN = ''
-        DARKCYAN = ''
-        BLUE = ''
-        GREEN = ''
-        YELLOW = ''
-        RED = ''
-        ENDC = ''
+        PURPLE = 0x05
+        CYAN = 0x0B
+        DARKCYAN = 0x03
+        BLUE = 0x09
+        GREEN = 0x0A
+        YELLOW = 0x0E
+        RED = 0x0C
+        ENDC = 0x07
 
         def disable(self):
             self.PURPLE = ''
