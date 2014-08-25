@@ -100,10 +100,10 @@ def getWebServerResponse(url):
         response = urllib2.urlopen(req)
         return response
     except urllib2.HTTPError as e:
-        printResult('[!]  Connection Error: ' + str(e.code), bcolors.RED)
-        sys.exit()
+        #ignore HTTPError (404, 400 etc)
+        return e
     except urllib2.URLError as e:
-        printResult('[!]  Connection Error: ' + str(e.reason), bcolors.RED)
+        printResult('[!]  Connection URLError: ' + str(e.reason), bcolors.RED, 2)
         sys.exit()
     except Exception as e:
         printResult('[!]  Connection Error: Unkown', bcolors.RED)
