@@ -99,10 +99,15 @@ def getWebServerResponse(url):
         req = urllib2.Request(url, None, headers)
         response = urllib2.urlopen(req)
         return response
+    except urllib2.HTTPError as e:
+        printResult('[!]  Connection Error: ' + str(e.code), bcolors.RED)
+        sys.exit()
     except urllib2.URLError as e:
-        return e
+        printResult('[!]  Connection Error: ' + str(e.reason), bcolors.RED)
+        sys.exit()
     except Exception as e:
-        return 0
+        printResult('[!]  Connection Error: Unkown', bcolors.RED)
+        sys.exit()
 
 
 def initialCheckUrl(url):
