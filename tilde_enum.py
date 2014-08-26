@@ -66,8 +66,7 @@ def printResult(msg, color='', level=1):
     # level = 1 : Important messages
     # level = 2 : More details
     if args.verbose_level >= level:
-        # seems like a little stupid
-        sys.stdout.write('                                                                                            \r')
+        sys.stdout.write('\t\t\t\t\t\t\t\t\t\t\t\t\t\r')
         sys.stdout.flush()
         if color:
             if os.name == "nt":
@@ -84,15 +83,6 @@ def printResult(msg, color='', level=1):
             f.write(msg + '\n')
             f.close()
 
-def checkOs():
-    # Check operating system for colorization
-    if os.name == "nt":
-        operating_system = "windows"
-    else:
-        operating_system = "posix"
-    return operating_system
-
-
 def getWebServerResponse(url):
     # This function takes in a URL and outputs the HTTP response code and content length (or error)
     try:
@@ -108,10 +98,12 @@ def getWebServerResponse(url):
         #ignore HTTPError (404, 400 etc)
         return e
     except urllib2.URLError as e:
-        printResult('[!]  Connection URLError: ' + str(e.reason), bcolors.RED, 2)
+        printResult('[!]  Connection URLError: ' + str(e.reason), bcolors.RED)
+        printFindings()
         sys.exit()
     except Exception as e:
         printResult('[!]  Connection Error: Unkown', bcolors.RED)
+        printFindings()
         sys.exit()
 
 
@@ -396,7 +388,7 @@ args = parser.parse_args()
 
 # COLORIZATION OF OUTPUT
 # The entire bcolors class was taken verbatim from the Social Engineer's Toolkit (ty @SET)
-if checkOs() == "posix":
+if not os.name == "nt":
     class bcolors:
         PURPLE = '\033[95m'        # Verbose
         CYAN = '\033[96m'
