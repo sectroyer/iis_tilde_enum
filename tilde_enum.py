@@ -66,7 +66,8 @@ def printResult(msg, color='', level=1):
     # level = 1 : Important messages
     # level = 2 : More details
     if args.verbose_level >= level:
-        sys.stdout.write('                                                   \r')
+        # seems like a little stupid
+        sys.stdout.write('                                                                                            \r')
         sys.stdout.flush()
         if color:
             if os.name == "nt":
@@ -95,7 +96,11 @@ def checkOs():
 def getWebServerResponse(url):
     # This function takes in a URL and outputs the HTTP response code and content length (or error)
     try:
+        if args.verbose_level:
+            sys.stdout.write("[*]  Target: %s \r" % url)
+            sys.stdout.flush()
         sleep(args.wait)
+        
         req = urllib2.Request(url, None, headers)
         response = urllib2.urlopen(req)
         return response
@@ -159,7 +164,7 @@ def initialCheckUrl(url):
 
 def checkVulnerableString(url):
     # Set the default string to be IIS6.x
-    check_string = '*~1*/.aspx' if args.directory_only == False else '*~1/.aspx'
+    check_string = '*~1*/.aspx' if args.limit_extension is None else '*~1'+args.limit_extension+'/.aspx'
 
     # Check if the server is IIS and vuln to tilde directory enumeration
     if args.f:
@@ -201,11 +206,17 @@ def findExtensions(url, filename):
     found_files = []
     notFound = True
     
-    if args.verbose_level:
-        sys.stdout.write("[-]  Enumerating extensions of %s...  \r" % filename)
-        sys.stdout.flush()
+    #if args.verbose_level:
+        #sys.stdout.write("[-]  Enumerating extensions of %s...  \r" % filename)
+        #sys.stdout.flush()
 
-    if not args.directory_only:
+    if args.limit_extension:
+        # We already know the extension, set notFound as False to ignore warnings
+        notFound = False
+        resp = getWebServerResponse(url+filename+args.limit_extension+'*/.aspx')
+        if resp.code == 404:
+            possible_exts[args.limit_extension[1:]] = 1
+    elif not args.limit_extension == '':
         for char1 in chars:
             resp1a = getWebServerResponse(url+filename+'*'+char1+'*/.aspx')
             if resp1a.code == 404:  # Got the first valid char
@@ -221,9 +232,9 @@ def findExtensions(url, filename):
                             if resp3a.code == 404:  # Got the third valid char
                                 if char1+char2 in possible_exts: del possible_exts[char1+char2]
                                 possible_exts[char1+char2+char3] = 1
-
-    # Check for directory anyway
-    if confirmDirectory(url, filename):
+    
+    # Check if it's a directory
+    if not args.limit_extension and confirmDirectory(url, filename):
         notFound = False
         addNewFindings([filename+'/'])
         printResult('[+]  Found directory:  ' +filename+'/', bcolors.YELLOW)
@@ -274,7 +285,8 @@ def charEnum(url, check_string, current_found):
     if current_length >= 6:
         counterEnum(url, check_string, current_found)
         return
-    else:
+    elif current_length > 0 and not args.limit_extension == '':
+        # If in directory searching mode, no need for this check
         # check if there are matched names shorter than 6
         test_url = url + current_found + check_string[1:]
         resp = getWebServerResponse(test_url)
@@ -287,9 +299,9 @@ def charEnum(url, check_string, current_found):
         test_name = current_found + char
         if args.resume_string and test_name < args.resume_string[:current_length+1]: continue
 
-        if args.verbose_level:
-            sys.stdout.write("[-]  charEnum: Enumerating.... %s   \r" % test_name )
-            sys.stdout.flush()
+        #if args.verbose_level:
+            #sys.stdout.write("[-]  charEnum: Enumerating.... %s   \r" % test_name )
+            #sys.stdout.flush()
         
         resp = getWebServerResponse(url + test_name + check_string)
         if resp.code == 404:
@@ -331,8 +343,13 @@ def main():
             printResult('[!]  You need to enter a valid URL for us to test.', bcolors.RED)
             sys.exit()
             
-        if args.directory_only:
-            printResult('[-]  Directory only mode: on')
+        if args.limit_extension is not None:
+            if args.limit_extension:
+                args.limit_extension = args.limit_extension[:3]
+                printResult('[-]  --limit-ext is set. Find names end with given extension only: %s'% (args.limit_extension), bcolors.GREEN)
+                args.limit_extension = '*' + args.limit_extension
+            else:
+                printResult('[-]  --limit-ext is set. Find directories only.', bcolors.GREEN)
             
         if args.resume_string:
             printResult('[-]  Resume from "%s"... characters before this will be ignored.' % args.resume_string)
@@ -352,6 +369,7 @@ def main():
         # Do the initial search for files in the root of the web server
         checkEightDotThreeEnum(url.scheme + '://' + url.netloc, check_string, url.path)
     except KeyboardInterrupt:
+        print '' # Keep last sys.stdout stay on screen
         printFindings()
         sys.exit()
 
@@ -373,7 +391,7 @@ parser.add_argument('-u', dest='url', help='URL to scan')
 parser.add_argument('-v', dest='verbose_level', type=int, default=1, help='verbose level of output (0~2)')
 parser.add_argument('-w', dest='wait', default=0, type=float, help='time in seconds to wait between requests')
 parser.add_argument('--resume', dest='resume_string', help='Resume from a given name (length <= 6)')
-parser.add_argument('--dir-only', action='store_true', dest='directory_only', default=False, help='Search for directories only')
+parser.add_argument('--limit-ext', dest='limit_extension', help='Enumerate for given extension only') # empty string for directory
 args = parser.parse_args()
 
 # COLORIZATION OF OUTPUT

