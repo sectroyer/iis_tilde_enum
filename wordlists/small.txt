@@ -939,21 +939,5 @@ zap
 zip
 zipfiles
 zips
-~adm
-~admin
-~administrator
-~bin
-~ftp
-~guest
-~mail
-~operator
-~root
-~sys
-~sysadm
-~sysadmin
-~test
-~user
-~webmaster
-~www
 
 
