@@ -407,6 +407,7 @@ anne
 annette
 annie
 announce
+announcement
 announcements
 answer
 anthony

@@ -51,29 +51,33 @@ optional arguments:
 Sample Output
 ======
 <pre>
-$  ./tilde_enum.py -u "http://iis/subdir" -w 0.1 -o output/enum_result.txt
-[-]  Testing with dummy file request http://iis/subdir/egSHcspvs8bQ5.htm
+$  ./tilde_enum.py -u "http://iis/subdir" -w 0.5 -o output/result.txt --resume=announ
+[-]  Testing with dummy file request http://iis/Uxd9ckrVGZMmp.htm
 [-]    URLNotThere -> HTTP Code: 404, Response Length: 1379
-[-]  Testing with user-submitted http://iis/subdir/
-[-]    URLUser -> HTTP Code: 403, Response Length: 218
-[!]  WARNING: We did not receive an HTTP response code 200 back with given url.
-[-]  User-supplied delay detected. Waiting 0.1 seconds between HTTP requests.
+[-]  Testing with user-submitted http://iis/
+[-]    URLUser -> HTTP Code: 200, Response Length: 1914
+[-]  Resume from "announ"... characters before this will be ignored.
+[-]  User-supplied delay detected. Waiting 0.5 seconds between HTTP requests.
 [+]  The server is reporting that it is IIS (Microsoft-IIS/6.0).
 [+]  The server is vulnerable to the IIS tilde enumeration vulnerability..
-[+]  Found file:  descri~1.htm
-[+]  Found file:  index-~1.htm
-[+]  Found file:  index-~2.htm
-[-]  Finished doing the 8.3 enumeration for /subdir/.
+[+]  Found file:  announ~1.htm
+[+]  Found directory:  aspnet~1/
+[+]  Found file:  cate-v~1.asp
+[+]  Found file:  cate-v~2.asp
+[*]  Testing: http://iis/c9*~1*/.aspx
+[!]  Stop tilde enumeration manually. Try wordlist enumeration from current findings now...
 
 ---------- OUTPUT START ------------------------------
 [+] Raw results:
-http://iis/subdir/descri~1.htm
-http://iis/subdir/index-~1.htm
-http://iis/subdir/index-~2.htm
+http://iis/announ~1.htm
+http://iis/aspnet~1/
+http://iis/cate-v~1.asp
+http://iis/cate-v~2.asp
 
-[+] Existing files found:
-http://iis/subdir/description.html
+[+] Existing files found: 1
+http://iis/announcement.htm
 
-[+] Existing Directories found: None.
+[+] Existing Directories found: 1
+http://iis/aspnet_client/
 ---------- OUTPUT COMPLETE ---------------------------
 </pre>
