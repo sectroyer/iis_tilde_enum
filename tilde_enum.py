@@ -198,7 +198,7 @@ def findExtensions(url, filename):
     if args.limit_extension:
         # We already know the extension, set notFound as False to ignore warnings
         notFound = False
-        resp = (url+filename+args.limit_extension+'*/.aspx')
+        resp = getWebServerResponse(url+filename+args.limit_extension+'*/.aspx')
         if resp.code == 404:
             possible_exts[args.limit_extension[1:]] = 1
     elif not args.limit_extension == '':
