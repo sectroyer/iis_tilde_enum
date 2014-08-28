@@ -31,19 +31,16 @@ headers = {'User-Agent': 'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WO
 # Targets is the list of files from the scanner output
 targets = []
 
-# Findings is the list of URLs that may be good on the web site
+# Findings store the enumerate results
 findings_new = []
-# TODO - Are all of these really necessary?
-findings_file =  {}      # Files discovered
-findings_other = []      # HTTP Response Codes other than 200
-findings_final = []      # Where the guessed files are output
-findings_dir =   []      # Directories discovered
-findings_dir_other =        []
-findings_dir_final =        []
-findings_dir_other_final =  []
+findings_file = []
+findings_dir = []
 
 # Location of the extension brute force word list
-exts = 'exts'
+path_wordlists = 'wordlists/big.txt'
+path_exts = 'wordlists/extensions.txt'
+wordlists = []
+exts = []
 
 # Character set to use for brute forcing
 chars = 'abcdefghijklmnopqrstuvwxyz1234567890-_(),'
@@ -87,7 +84,7 @@ def getWebServerResponse(url):
     # This function takes in a URL and outputs the HTTP response code and content length (or error)
     try:
         if args.verbose_level:
-            sys.stdout.write("[*]  Target: %s \r" % url)
+            sys.stdout.write("[*]  Testing: %s \t\t\r" % url)
             sys.stdout.flush()
         sleep(args.wait)
         
@@ -197,15 +194,11 @@ def findExtensions(url, filename):
     possible_exts = {}
     found_files = []
     notFound = True
-    
-    #if args.verbose_level:
-        #sys.stdout.write("[-]  Enumerating extensions of %s...  \r" % filename)
-        #sys.stdout.flush()
 
     if args.limit_extension:
         # We already know the extension, set notFound as False to ignore warnings
         notFound = False
-        resp = getWebServerResponse(url+filename+args.limit_extension+'*/.aspx')
+        resp = (url+filename+args.limit_extension+'*/.aspx')
         if resp.code == 404:
             possible_exts[args.limit_extension[1:]] = 1
     elif not args.limit_extension == '':
@@ -290,10 +283,6 @@ def charEnum(url, check_string, current_found):
         # pass filenames that smaller than resume_string
         test_name = current_found + char
         if args.resume_string and test_name < args.resume_string[:current_length+1]: continue
-
-        #if args.verbose_level:
-            #sys.stdout.write("[-]  charEnum: Enumerating.... %s   \r" % test_name )
-            #sys.stdout.flush()
         
         resp = getWebServerResponse(url + test_name + check_string)
         if resp.code == 404:
@@ -314,10 +303,77 @@ def checkEightDotThreeEnum(url, check_string, dirname='/'):
     args.resume_string = ''
     return
 
+def confirmUrlExist(url, isFile=True):
+    # Check if the given url is existed or not there
+    resp = getWebServerResponse(url)
+    if resp.code != response_code['not_there_code']:
+        size = len(resp.read())
+        if response_code['not_there_code'] == 404:
+            return True
+        elif not isFile and resp.code == 301:
+            return True
+        elif size != response_code['not_there_length']:
+            return True
+        else:
+            printResult('[!]  Strange. Not sure if %s is existed.' % url, bcolors.YELLOW, 2)
+            printResult('[!]     Response code=%s, size=%s' % (resp.code, size), bcolors.ENDC, 2)
+    return False
+
+def urlPathEnum(baseUrl, possible_filenames, possible_extensions, isFile):
+    # combine all possible wordlists from wordlistEnum() to check if url exists
+    counter = 0
+    for filename in possible_filenames:
+        if isFile:
+            for extension in possible_extensions:
+                if confirmUrlExist(baseUrl + filename + '.' + extension):
+                    findings_file.append(filename + '.' + extension)
+                    counter += 1
+        elif confirmUrlExist(baseUrl + filename, False):
+            findings_dir.append(filename + '/')
+            counter += 1
+    return counter
+    
+def wordlistEnum(url):
+    # get all permutations of wordlist according to findings
+    for finding in findings_new:
+        isFile = True
+        possible_exts = []
+        
+        if finding.endswith('/'):
+            isFile = False
+            finding = finding[:-1] + '.' # add this dot for split
+            
+        (filename, ext) = finding.split('.')
+        if filename[-1] != '1':
+            break # skip the same filename
+        # remove tilde and number
+        filename = filename[:-2]
+
+        # find all possible extensions
+        if isFile:
+            possible_exts = [extension for extension in exts if extension.startswith(ext) and extension != ext]
+            possible_exts.append(ext)
+
+        # Phase 1: start with filename (most possible result)
+        words_startswith = [word for word in wordlists if word.startswith(filename) and word != filename]
+        words_startswith.append(filename)
+
+        foundNum = urlPathEnum(url, words_startswith, possible_exts, isFile)
+        if foundNum: continue
+
 def printFindings():
     if len(findings_new):
-        printResult('\n---------- FINAL OUTPUT ------------------------------')
+        printResult('\n---------- OUTPUT START ------------------------------')
+        printResult('[+] Raw results:')
         for finding in sorted(findings_new):
+            printResult(args.url + finding)
+            
+        printResult('\n[+] Existing files found: %s'% (len(findings_file) if findings_file else 'None.'))
+        for finding in sorted(findings_file):
+            printResult(args.url + finding)
+            
+        printResult('\n[+] Existing Directories found: %s'% (len(findings_dir) if findings_dir else 'None.'))
+        for finding in sorted(findings_dir):
             printResult(args.url + finding)
         printResult('---------- OUTPUT COMPLETE ---------------------------\n\n\n')
     else:
@@ -344,11 +400,21 @@ def main():
                 printResult('[-]  --limit-ext is set. Find directories only.', bcolors.GREEN)
             
         if args.resume_string:
-            printResult('[-]  Resume from "%s"... characters before this will be ignored.' % args.resume_string)
+            printResult('[-]  Resume from "%s"... characters before this will be ignored.' % args.resume_string, bcolors.GREEN)
 
         if args.wait != 0 :
             printResult('[-]  User-supplied delay detected. Waiting %s seconds between HTTP requests.' % args.wait)
 
+        if args.path_wordlists:
+            printResult('[-]  Custom wordlists file: %s' % args.path_wordlists)
+        else:
+            args.path_wordlists = path_wordlists
+            
+        if args.path_exts:
+            printResult('[-]  Custom extensions file: %s' % args.path_exts)
+        else:
+            args.path_exts = path_exts
+            
         printResult('[+]  HTTP Response Codes: %s' % response_code, bcolors.PURPLE, 2)
 
         # Check to see if the remote server is IIS and vulnerable to the Tilde issue
@@ -356,12 +422,34 @@ def main():
 
         # Break apart the url
         url = urlparse(args.url)
-        url_good = url.scheme + '://' + url.netloc + url.path
+        url_ok = url.scheme + '://' + url.netloc + url.path
 
+        # Handle dictionaries
+        try:
+            global wordlists, exts
+            wordlists = [line.strip().lower() for line in open(args.path_wordlists)]
+            exts = [line.strip().strip('.').lower() for line in open(args.path_exts)]
+        except IOError as e:
+            printResult('[!]  Error while reading files. %s' % (e.strerror), bcolors.RED)
+            sys.exit()
+
+        #### Test ####
+        #addNewFindings(["descri~1.htm"])
+        #wordlistEnum(url_ok)
+        #printFindings()
+        #return
+        #### Test ####
         # Do the initial search for files in the root of the web server
         checkEightDotThreeEnum(url.scheme + '://' + url.netloc, check_string, url.path)
     except KeyboardInterrupt:
-        print '' # Keep last sys.stdout stay on screen
+        sys.stdout.write('\n') # Keep last sys.stdout stay on screen
+        printResult('[!]  Stop tilde enumeration manually. Try wordlist enumeration from current findings now...', bcolors.RED)
+
+    try:
+        # find real path by wordlist enumerate
+        wordlistEnum(url_ok)
+    except KeyboardInterrupt:
+        sys.stdout.write('\n') # Keep last sys.stdout stay on screen
         printFindings()
         sys.exit()
 
@@ -375,8 +463,9 @@ def main():
 
 # Command Line Arguments
 parser = argparse.ArgumentParser(description='Exploits and expands the file names found from the tilde enumeration vuln')
-parser.add_argument('-d', dest='dirwordlist', help='an optional wordlist for directory name content')
-parser.add_argument('-f', action='store_true', default=False, help='force testing of the server even if the headers do not report it as an IIS system')
+parser.add_argument('-d', dest='path_wordlists', help='Path of wordlists file')
+parser.add_argument('-e', dest='path_exts', help='Path of extensions file')
+parser.add_argument('-f', action='store_true', default=False, help='Force testing even if the server seems not vulnerable')
 parser.add_argument('-o', dest='out_file',default='', help='Filename to store output')
 parser.add_argument('-p', dest='proxy',default='', help='Use a proxy host:port')
 parser.add_argument('-u', dest='url', help='URL to scan')

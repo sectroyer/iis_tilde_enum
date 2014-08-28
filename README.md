@@ -24,17 +24,18 @@ Always enjoy feedback and suggestions.
 Help
 ====
 <pre>$  ./tilde_enum.py -h
-usage: tilde_enum.py [-h] [-d DIRWORDLIST] [-f] [-o OUT_FILE] [-p PROXY]
-                     [-u URL] [-v VERBOSE_LEVEL] [-w WAIT]
-                     [--resume RESUME_STRING] [--limit-ext LIMIT_EXTENSION]
+usage: tilde_enum.py [-h] [-d PATH_WORDLISTS] [-e PATH_EXTS] [-f]
+                     [-o OUT_FILE] [-p PROXY] [-u URL] [-v VERBOSE_LEVEL]
+                     [-w WAIT] [--resume RESUME_STRING]
+                     [--limit-ext LIMIT_EXTENSION]
 
 Exploits and expands the file names found from the tilde enumeration vuln
 
 optional arguments:
   -h, --help            show this help message and exit
-  -d DIRWORDLIST        an optional wordlist for directory name content
-  -f                    force testing of the server even if the headers do not
-                        report it as an IIS system
+  -d PATH_WORDLISTS     Path of wordlists file
+  -e PATH_EXTS          Path of extensions file
+  -f                    Force testing even if the server seems not vulnerable
   -o OUT_FILE           Filename to store output
   -p PROXY              Use a proxy host:port
   -u URL                URL to scan
@@ -50,26 +51,29 @@ optional arguments:
 Sample Output
 ======
 <pre>
-$  ./tilde_enum.py -u "http://iis/" -w 0.1 -v 2 --resume=jss --limit-ext=htm
-[-]  Verbose Level=2 ....brace yourself for additional information.
-[-]  Testing with dummy file request http://iis/MH2GpGp9k44uw.htm
+$  ./tilde_enum.py -u "http://iis/subdir" -w 0.1 -o output/enum_result.txt
+[-]  Testing with dummy file request http://iis/subdir/egSHcspvs8bQ5.htm
 [-]    URLNotThere -> HTTP Code: 404, Response Length: 1379
-[-]  Testing with user-submitted http://iis/
-[-]    URLUser -> HTTP Code: 200, Response Length: 46
-[-]  --limit-ext is set. Find names end with given extension only: htm
-[-]  Resume from "jss"... characters before this will be ignored.
+[-]  Testing with user-submitted http://iis/subdir/
+[-]    URLUser -> HTTP Code: 403, Response Length: 218
+[!]  WARNING: We did not receive an HTTP response code 200 back with given url.
 [-]  User-supplied delay detected. Waiting 0.1 seconds between HTTP requests.
-[+]  HTTP Response Codes: {'user_length': 46, 'not_there_length': 1379, 'user_code': 200, 'not_there_code': 404}
 [+]  The server is reporting that it is IIS (Microsoft-IIS/6.0).
 [+]  The server is vulnerable to the IIS tilde enumeration vulnerability..
-[+]  counterEnum: jssfhc~1 to ~2.
-[+]  Found file:  jssfhc~1.htm
-[+]  counterEnum: jsstra~1 to ~2.
-[+]  Found file:  jsstra~1.htm
-[-]  Finished doing the 8.3 enumeration for /.
+[+]  Found file:  descri~1.htm
+[+]  Found file:  index-~1.htm
+[+]  Found file:  index-~2.htm
+[-]  Finished doing the 8.3 enumeration for /subdir/.
 
----------- FINAL OUTPUT ------------------------------
-http://iis/jssfhc~1.htm
-http://iis/jsstra~1.htm
+---------- OUTPUT START ------------------------------
+[+] Raw results:
+http://iis/subdir/descri~1.htm
+http://iis/subdir/index-~1.htm
+http://iis/subdir/index-~2.htm
+
+[+] Existing files found:
+http://iis/subdir/description.html
+
+[+] Existing Directories found: None.
 ---------- OUTPUT COMPLETE ---------------------------
 </pre>

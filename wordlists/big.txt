@@ -1237,6 +1237,8 @@ desarrollo
 descarga
 descarrega
 descarregues
+description
+descriptions
 desenvolupament
 design
 desiree
@@ -4056,6 +4058,8 @@ webmaste
 webmaster
 webmasters
 websearch
+webservice
+webservices
 website
 webstat
 webstats
