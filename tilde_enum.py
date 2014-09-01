@@ -362,9 +362,9 @@ def wordlistEnum(url):
         if foundNum: continue
 
 def printFindings():
-    if len(findings_new):
+    if findings_new or findings_file or findings_dir:
         printResult('\n---------- OUTPUT START ------------------------------')
-        printResult('[+] Raw results:')
+        printResult('[+] Raw results: %s'% (len(findings_new) if findings_new else 'None.'))
         for finding in sorted(findings_new):
             printResult(args.url + finding)
             
@@ -432,6 +432,8 @@ def main():
         except IOError as e:
             printResult('[!]  Error while reading files. %s' % (e.strerror), bcolors.RED)
             sys.exit()
+    except KeyboardInterrupt:
+        sys.exit()
 
         #### Test ####
         #addNewFindings(["descri~1.htm"])
@@ -439,17 +441,18 @@ def main():
         #printFindings()
         #return
         #### Test ####
+    try:
         # Do the initial search for files in the root of the web server
         checkEightDotThreeEnum(url.scheme + '://' + url.netloc, check_string, url.path)
     except KeyboardInterrupt:
-        sys.stdout.write('\n') # Keep last sys.stdout stay on screen
+        sys.stdout.write(' (interrupted!) ...\n') # Keep last sys.stdout stay on screen
         printResult('[!]  Stop tilde enumeration manually. Try wordlist enumeration from current findings now...', bcolors.RED)
 
     try:
         # find real path by wordlist enumerate
         wordlistEnum(url_ok)
     except KeyboardInterrupt:
-        sys.stdout.write('\n') # Keep last sys.stdout stay on screen
+        sys.stdout.write(' (interrupted!) ...\n') # Keep last sys.stdout stay on screen
         printFindings()
         sys.exit()
 
@@ -471,7 +474,7 @@ parser.add_argument('-p', dest='proxy',default='', help='Use a proxy host:port')
 parser.add_argument('-u', dest='url', help='URL to scan')
 parser.add_argument('-v', dest='verbose_level', type=int, default=1, help='verbose level of output (0~2)')
 parser.add_argument('-w', dest='wait', default=0, type=float, help='time in seconds to wait between requests')
-parser.add_argument('--resume', dest='resume_string', help='Resume from a given name (length <= 6)')
+parser.add_argument('--resume', dest='resume_string', help='Resume from a given name (length lt 6)')
 parser.add_argument('--limit-ext', dest='limit_extension', help='Enumerate for given extension only') # empty string for directory
 args = parser.parse_args()
 

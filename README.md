@@ -1,13 +1,13 @@
 iis_tilde_enum
-==========
+==============
 
-Takes a URL and then exploits the IIS tilde 8.3 enumeration vuln and tries to get you full file names.
+Takes a URL and then exploits the **IIS tilde 8.3 enumeration vuln** and tries to get you full file names.
 
 You feed this script a URL and also a word list of potential file names. The script will look up the file
 roots in your word list and then try them with appropriate extensions.
 
 For word lists, the [fuzzdb](https://code.google.com/p/fuzzdb/) word lists are pretty good. We sometimes use the
-https://code.google.com/p/fuzzdb/source/browse/trunk/discovery/PredictableRes/raft-small-words-lowercase.txt
+[raft-small-words-lowercase.txt](https://code.google.com/p/fuzzdb/source/browse/trunk/discovery/PredictableRes/raft-small-words-lowercase.txt)
 (or large or medium) for this work.
 
 This is not a directory enumerator (i.e., tries all words in a list against a web server). It will only find
@@ -22,7 +22,7 @@ Always enjoy feedback and suggestions.
 
 
 Help
-====
+----
 <pre>$  ./tilde_enum.py -h
 usage: tilde_enum.py [-h] [-d PATH_WORDLISTS] [-e PATH_EXTS] [-f]
                      [-o OUT_FILE] [-p PROXY] [-u URL] [-v VERBOSE_LEVEL]
@@ -42,14 +42,14 @@ optional arguments:
   -v VERBOSE_LEVEL      verbose level of output (0~2)
   -w WAIT               time in seconds to wait between requests
   --resume RESUME_STRING
-                        Resume from a given name (length &lt;= 6)
+                        Resume from a given name (length lt 6)
   --limit-ext LIMIT_EXTENSION
                         Enumerate for given extension only
 </pre>
 
 
 Sample Output
-======
+-------------
 <pre>
 $  ./tilde_enum.py -u "http://iis/subdir" -w 0.5 -o output/result.txt --resume=announ
 [-]  Testing with dummy file request http://iis/Uxd9ckrVGZMmp.htm

@@ -15,6 +15,7 @@
 .config
 .dll
 .do
+.docx
 .exe
 .gz
 .htm
@@ -35,6 +36,7 @@
 .php
 .phtml
 .pl
+.pptx
 .rar
 .reg
 .sh
@@ -46,4 +48,5 @@
 .tmp
 .txt
 .xml
+.xslx
 .zip
