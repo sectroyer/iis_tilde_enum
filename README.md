@@ -25,10 +25,10 @@ Always enjoy feedback and suggestions.
 Help
 ----
 <pre>$  ./tilde_enum.py -h
-usage: tilde_enum.py [-h] [-d PATH_WORDLISTS] [-e PATH_EXTS] [-f]
+usage: tilde_enum.py [-h] [-d PATH_WORDLISTS] [-e PATH_EXTS] [-f] [-g]
                      [-o OUT_FILE] [-p PROXY] [-u URL] [-v VERBOSE_LEVEL]
-                     [-w WAIT] [--resume RESUME_STRING]
-                     [--limit-ext LIMIT_EXTENSION]
+                     [-w WAIT] [--limit-ext LIMIT_EXTENSION]
+                     [--resume RESUME_STRING]
 
 Exploits and expands the file names found from the tilde enumeration vuln
 
@@ -37,15 +37,16 @@ optional arguments:
   -d PATH_WORDLISTS     Path of wordlists file
   -e PATH_EXTS          Path of extensions file
   -f                    Force testing even if the server seems not vulnerable
+  -g                    Enable Google keyword suggestion to enhance wordlists
   -o OUT_FILE           Filename to store output
   -p PROXY              Use a proxy host:port
   -u URL                URL to scan
   -v VERBOSE_LEVEL      verbose level of output (0~2)
   -w WAIT               time in seconds to wait between requests
-  --resume RESUME_STRING
-                        Resume from a given name (length lt 6)
   --limit-ext LIMIT_EXTENSION
                         Enumerate for given extension only
+  --resume RESUME_STRING
+                        Resume from a given name (length lt 6)
 </pre>
 
 

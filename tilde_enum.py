@@ -10,13 +10,15 @@ Fork from:  Micah Hoffman (@WebBreacher)
 """
 
 import os
+import re
 import sys
+import json
 import ctypes
-import argparse
 import random
 import string
-import itertools
 import urllib2
+import argparse
+import itertools
 from urlparse import urlparse
 from time import sleep
 
@@ -103,6 +105,25 @@ def getWebServerResponse(url):
         printFindings()
         sys.exit()
 
+def getGoogleKeywords(prefix):
+    try:
+        req = urllib2.Request('http://suggestqueries.google.com/complete/search?q=%s&client=firefox&hl=en'% prefix)
+        resp = urllib2.urlopen(req)
+        result_resp = json.loads(resp.read())
+        result = []
+        for word in result_resp[1]:
+            # keep only enumarable chars
+            keywords = re.findall("["+chars+"]+", word)
+            result.append(keywords[0])
+            if len(keywords):
+                result.append("".join(keywords))
+        return list(set(result))
+    except urllib2.URLError as e:
+        printResult('[!]  There is an error when retrieving keywords from Google: %s, skipped' % str(e.reason), bcolors.RED)
+        return []
+    except Exception as e:
+        printResult('[!]  There is an unknown error when retrieving keywords form Google, skipped', bcolors.RED)
+        return []
 
 def initialCheckUrl(url):
     # This function checks to see if the web server is running and what kind of response codes
@@ -358,7 +379,11 @@ def wordlistEnum(url):
         words_startswith = [word for word in wordlists if word.startswith(filename) and word != filename]
         words_startswith.append(filename)
 
-        foundNum = urlPathEnum(url, words_startswith, possible_exts, isFile)
+        if args.enable_google:
+            words_startswith.extend(getGoogleKeywords(filename))
+            words_startswith = words_startswith
+
+        foundNum = urlPathEnum(url, list(set(words_startswith)), possible_exts, isFile)
         if foundNum: continue
 
 def printFindings():
@@ -434,13 +459,14 @@ def main():
             sys.exit()
     except KeyboardInterrupt:
         sys.exit()
-
-        #### Test ####
-        #addNewFindings(["descri~1.htm"])
-        #wordlistEnum(url_ok)
-        #printFindings()
-        #return
-        #### Test ####
+        
+#### Test ####
+##    addNewFindings(["descri~1.htm"])
+##    wordlistEnum(url_ok)
+##    printFindings()
+##    return
+#### Test ####
+        
     try:
         # Do the initial search for files in the root of the web server
         checkEightDotThreeEnum(url.scheme + '://' + url.netloc, check_string, url.path)
@@ -469,13 +495,14 @@ parser = argparse.ArgumentParser(description='Exploits and expands the file name
 parser.add_argument('-d', dest='path_wordlists', help='Path of wordlists file')
 parser.add_argument('-e', dest='path_exts', help='Path of extensions file')
 parser.add_argument('-f', action='store_true', default=False, help='Force testing even if the server seems not vulnerable')
+parser.add_argument('-g', action='store_true', default=False, dest='enable_google', help='Enable Google keyword suggestion to enhance wordlists')
 parser.add_argument('-o', dest='out_file',default='', help='Filename to store output')
 parser.add_argument('-p', dest='proxy',default='', help='Use a proxy host:port')
 parser.add_argument('-u', dest='url', help='URL to scan')
 parser.add_argument('-v', dest='verbose_level', type=int, default=1, help='verbose level of output (0~2)')
 parser.add_argument('-w', dest='wait', default=0, type=float, help='time in seconds to wait between requests')
-parser.add_argument('--resume', dest='resume_string', help='Resume from a given name (length lt 6)')
 parser.add_argument('--limit-ext', dest='limit_extension', help='Enumerate for given extension only') # empty string for directory
+parser.add_argument('--resume', dest='resume_string', help='Resume from a given name (length lt 6)')
 args = parser.parse_args()
 
 # COLORIZATION OF OUTPUT
