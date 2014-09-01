@@ -17,6 +17,7 @@ by the vulnerability). You should still try to enumerate directories using a wor
 
 Just as a note: on Windows computers you can view 8.3 names in the command prompt window by using the
 `dir /x` command. One of the columns will be the 8.3 name (if there is one).
+You can find the converting rules for 8.3 filename on [wikipedia](http://en.wikipedia.org/wiki/8.3_filename#How_to_convert_a_long_filename_to_a_short_filename)
 
 Always enjoy feedback and suggestions.
 
