@@ -53,7 +53,7 @@ optional arguments:
 Sample Output
 -------------
 <pre>
-$  ./tilde_enum.py -u "http://iis/subdir" -w 0.5 -o output/result.txt --resume=announ
+$  ./tilde_enum.py -u "http://iis/" -w 0.5 -o output/result.txt --resume=announ
 [-]  Testing with dummy file request http://iis/Uxd9ckrVGZMmp.htm
 [-]    URLNotThere -> HTTP Code: 404, Response Length: 1379
 [-]  Testing with user-submitted http://iis/

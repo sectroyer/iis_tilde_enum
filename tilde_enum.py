@@ -45,10 +45,13 @@ wordlists = []
 exts = []
 
 # Character set to use for brute forcing
-chars = 'abcdefghijklmnopqrstuvwxyz1234567890-_(),'
+chars = 'abcdefghijklmnopqrstuvwxyz1234567890-_()'
 
 # Response codes - user and error
 response_code = {}
+
+# Environment logs
+counter_requests = 0
 
 # Terminal handler
 std_out_handle = ctypes.windll.kernel32.GetStdHandle(-11)
@@ -84,12 +87,14 @@ def printResult(msg, color='', level=1):
 
 def getWebServerResponse(url):
     # This function takes in a URL and outputs the HTTP response code and content length (or error)
+    global counter_requests
     try:
         if args.verbose_level:
             sys.stdout.write("[*]  Testing: %s \t\t\r" % url)
             sys.stdout.flush()
         sleep(args.wait)
         
+        counter_requests += 1
         req = urllib2.Request(url, None, headers)
         response = urllib2.urlopen(req)
         return response
@@ -340,19 +345,46 @@ def confirmUrlExist(url, isFile=True):
             printResult('[!]     Response code=%s, size=%s' % (resp.code, size), bcolors.ENDC, 2)
     return False
 
-def urlPathEnum(baseUrl, possible_filenames, possible_extensions, isFile):
-    # combine all possible wordlists from wordlistEnum() to check if url exists
+def urlPathEnum(baseUrl, prefix, possible_suffixs, possible_extensions, isFile):
+    # combine all possible wordlists to check if url exists
+    ls = len(possible_suffixs)
+    le = len(possible_extensions)
+    printResult("[-]  urlPathEnum: '%s' + %d suffix(s) + %d ext(s) = %d requests"% (prefix,ls,le,ls*le), bcolors.ENDC, 2)
+    
     counter = 0
-    for filename in possible_filenames:
+    for suffix in possible_suffixs:
         if isFile:
             for extension in possible_extensions:
-                if confirmUrlExist(baseUrl + filename + '.' + extension):
-                    findings_file.append(filename + '.' + extension)
+                if confirmUrlExist(baseUrl + prefix + suffix + '.' + extension):
+                    findings_file.append(prefix + suffix + '.' + extension)
                     counter += 1
-        elif confirmUrlExist(baseUrl + filename, False):
-            findings_dir.append(filename + '/')
+        elif confirmUrlExist(baseUrl + prefix + suffix, False):
+            findings_dir.append(prefix + suffix + '/')
             counter += 1
     return counter
+    
+def wordlistRecursive(url, prefix, suffix, possible_extensions, isFile):
+    # Recursively split filename into prefix and suffix, and enum the words that start with suffix
+    if suffix == '': return 0 # [TODO] common dictionary brute force
+    
+    # Phase 1: finding words that start with filename (most possible result)
+    words_startswith = [word for word in wordlists if word.startswith(suffix) and word != suffix]
+    words_startswith.append(suffix)
+
+    if args.enable_google:
+        words_startswith.extend(getGoogleKeywords(suffix))
+
+    foundNum = urlPathEnum(url, prefix, list(set(words_startswith)), possible_extensions, isFile)
+    if foundNum: return foundNum
+    
+    # Phase 2: move known words to prefix, and continue enum the rest
+    for word in wordlists:
+        if len(word) > 1 and suffix.startswith(word):
+            foundNum = wordlistRecursive(url, prefix + word, suffix[len(word):], possible_extensions, isFile)
+            if foundNum: return foundNum
+    
+    # Phase 3: if no prefix found in dictionary, simply move the first character
+    return wordlistRecursive(url, prefix + suffix[0], suffix[1:], possible_extensions, isFile)
     
 def wordlistEnum(url):
     # get all permutations of wordlist according to findings
@@ -375,18 +407,12 @@ def wordlistEnum(url):
             possible_exts = [extension for extension in exts if extension.startswith(ext) and extension != ext]
             possible_exts.append(ext)
 
-        # Phase 1: start with filename (most possible result)
-        words_startswith = [word for word in wordlists if word.startswith(filename) and word != filename]
-        words_startswith.append(filename)
-
-        if args.enable_google:
-            words_startswith.extend(getGoogleKeywords(filename))
-            words_startswith = words_startswith
-
-        foundNum = urlPathEnum(url, list(set(words_startswith)), possible_exts, isFile)
+        foundNum = wordlistRecursive(url, '', filename, possible_exts, isFile)
         if foundNum: continue
+        # [TODO] if result is empty, brute force all possible characters at the tail (lenth < N)
 
 def printFindings():
+    printResult('[+] Total requests sent: %d'% counter_requests)
     if findings_new or findings_file or findings_dir:
         printResult('\n---------- OUTPUT START ------------------------------')
         printResult('[+] Raw results: %s'% (len(findings_new) if findings_new else 'None.'))
@@ -461,7 +487,7 @@ def main():
         sys.exit()
         
 #### Test ####
-##    addNewFindings(["descri~1.htm"])
+##    addNewFindings(["descri~1.htm","testte~1.htm","s-t-o-~1.asp","indexc~1.asp"])
 ##    wordlistEnum(url_ok)
 ##    printFindings()
 ##    return
