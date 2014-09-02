@@ -35,14 +35,17 @@ targets = []
 
 # Findings store the enumerate results
 findings_new = []
+findings_ignore = []
 findings_file = []
 findings_dir = []
 
 # Location of the extension brute force word list
 path_wordlists = 'wordlists/big.txt'
 path_exts = 'wordlists/extensions.txt'
+path_exts_ignore = 'wordlists/extensions_ignore.txt'
 wordlists = []
 exts = []
+exts_ignore = []
 
 # Character set to use for brute forcing
 chars = 'abcdefghijklmnopqrstuvwxyz1234567890-_()'
@@ -129,6 +132,20 @@ def getGoogleKeywords(prefix):
     except Exception as e:
         printResult('[!]  There is an unknown error when retrieving keywords form Google, skipped', bcolors.RED)
         return []
+
+        
+def file2List(path):
+    if not os.path.isfile(path):
+        printResult('[!]  Path %s not exists, change path relative to the script file' % path, bcolors.GREEN, 2)
+        path = os.path.dirname(__file__) + os.sep + path
+    if not os.path.isfile(path):
+        printResult('[!]  Error. Path %s not existed.' % path, bcolors.RED)
+        sys.exit()
+    try:
+        return [line.strip().lower() for line in open(path)]
+    except IOError as e:
+        printResult('[!]  Error while reading files. %s' % (e.strerror), bcolors.RED)
+        sys.exit()
 
 def initialCheckUrl(url):
     # This function checks to see if the web server is running and what kind of response codes
@@ -261,7 +278,6 @@ def findExtensions(url, filename):
                 found_files.append(filename+'.'+item)
         addNewFindings(found_files)
     return
-    
 
 def confirmDirectory(url, filename):
     resp = getWebServerResponse(url + filename + '/.aspx')
@@ -413,11 +429,16 @@ def wordlistEnum(url):
 
 def printFindings():
     printResult('[+] Total requests sent: %d'% counter_requests)
-    if findings_new or findings_file or findings_dir:
+    if findings_new or findings_ignore or findings_file or findings_dir:
         printResult('\n---------- OUTPUT START ------------------------------')
         printResult('[+] Raw results: %s'% (len(findings_new) if findings_new else 'None.'))
         for finding in sorted(findings_new):
             printResult(args.url + finding)
+        
+        if findings_ignore:
+            printResult('\n[+] Ignored results: %s'% len(findings_ignore))
+            for finding in sorted(findings_ignore):
+                printResult(args.url + finding)
             
         printResult('\n[+] Existing files found: %s'% (len(findings_file) if findings_file else 'None.'))
         for finding in sorted(findings_file):
@@ -458,13 +479,15 @@ def main():
 
         if args.path_wordlists:
             printResult('[-]  Custom wordlists file: %s' % args.path_wordlists)
-        else:
-            args.path_wordlists = path_wordlists
+        else: args.path_wordlists = path_wordlists
             
         if args.path_exts:
             printResult('[-]  Custom extensions file: %s' % args.path_exts)
-        else:
-            args.path_exts = path_exts
+        else: args.path_exts = path_exts
+        
+        if args.path_exts_ignore:
+            printResult('[-]  Custom ignorable extensions file: %s' % args.path_exts_ignore)
+        else: args.path_exts_ignore = path_exts_ignore
             
         printResult('[+]  HTTP Response Codes: %s' % response_code, bcolors.PURPLE, 2)
 
@@ -476,13 +499,10 @@ def main():
         url_ok = url.scheme + '://' + url.netloc + url.path
 
         # Handle dictionaries
-        try:
-            global wordlists, exts
-            wordlists = [line.strip().lower() for line in open(args.path_wordlists)]
-            exts = [line.strip().strip('.').lower() for line in open(args.path_exts)]
-        except IOError as e:
-            printResult('[!]  Error while reading files. %s' % (e.strerror), bcolors.RED)
-            sys.exit()
+        wordlists.extend(file2List(args.path_wordlists))
+        exts.extend(file2List(args.path_exts))
+        exts_ignore.extend(file2List(args.path_exts_ignore))
+        
     except KeyboardInterrupt:
         sys.exit()
         
@@ -501,6 +521,9 @@ def main():
         printResult('[!]  Stop tilde enumeration manually. Try wordlist enumeration from current findings now...', bcolors.RED)
 
     try:
+        # separate ignorable extension from findings
+        findings_ignore.extend([f for f in findings_new for e in exts_ignore if f.endswith(e)])
+        findings_new[:] = [f for f in findings_new if f not in findings_ignore]
         # find real path by wordlist enumerate
         wordlistEnum(url_ok)
     except KeyboardInterrupt:
@@ -527,6 +550,7 @@ parser.add_argument('-p', dest='proxy',default='', help='Use a proxy host:port')
 parser.add_argument('-u', dest='url', help='URL to scan')
 parser.add_argument('-v', dest='verbose_level', type=int, default=1, help='verbose level of output (0~2)')
 parser.add_argument('-w', dest='wait', default=0, type=float, help='time in seconds to wait between requests')
+parser.add_argument('--ignore-ext', dest='path_exts_ignore', help='Path of ignorable extensions file')
 parser.add_argument('--limit-ext', dest='limit_extension', help='Enumerate for given extension only') # empty string for directory
 parser.add_argument('--resume', dest='resume_string', help='Resume from a given name (length lt 6)')
 args = parser.parse_args()

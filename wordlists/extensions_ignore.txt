@@ -1,0 +1,10 @@
+bmp
+css
+doc
+gif
+jpe
+jpg
+pdf
+png
+ppt
+xsl

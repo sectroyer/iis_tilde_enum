@@ -68,6 +68,7 @@ $  ./tilde_enum.py -u "http://iis/" -w 0.5 -o output/result.txt --resume=announ
 [+]  Found file:  cate-v~2.asp
 [*]  Testing: http://iis/c9*~1*/.aspx
 [!]  Stop tilde enumeration manually. Try wordlist enumeration from current findings now...
+[+] Total requests sent: 337
 
 ---------- OUTPUT START ------------------------------
 [+] Raw results:
@@ -76,8 +77,9 @@ http://iis/aspnet~1/
 http://iis/cate-v~1.asp
 http://iis/cate-v~2.asp
 
-[+] Existing files found: 1
+[+] Existing files found: 2
 http://iis/announcement.htm
+http://iis/cate-visitor.asp
 
 [+] Existing Directories found: 1
 http://iis/aspnet_client/
