@@ -7,6 +7,7 @@ asp
 aspx
 bak
 bat
+bzip
 cache
 cfm
 cgi
@@ -25,8 +26,12 @@ file
 font
 ftxt
 gz
+gzip
+hosts
+htaccess
 htm
 html
+htpasswd
 inc
 ini
 java
@@ -46,6 +51,7 @@ master
 mdb
 midi
 mime
+model
 mpeg
 nsf
 old
@@ -57,15 +63,18 @@ pipe
 pl
 plist
 pptx
+profile
 proj
 properties
 rar
 reg
+rules
 setting
 settings
 sh
 shtml
 sql
+sqlite
 tar
 tar.gz
 temp
@@ -79,4 +88,5 @@ xml
 xlsb
 xlsm
 xlsx
+yaml
 zip

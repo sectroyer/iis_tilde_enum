@@ -56,8 +56,9 @@ response_code = {}
 # Environment logs
 counter_requests = 0
 
-# Terminal handler
-std_out_handle = ctypes.windll.kernel32.GetStdHandle(-11)
+# Terminal handler for Windows
+if os.name == "nt":
+    std_out_handle = ctypes.windll.kernel32.GetStdHandle(-11)
 
 
 #=================================================
