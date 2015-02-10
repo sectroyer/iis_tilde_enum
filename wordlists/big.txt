@@ -736,7 +736,7 @@ bulk
 bull
 bulldog
 bullet
-bulleti
+bulletin
 bullshit
 bumbling
 bunny

@@ -479,16 +479,22 @@ def main():
             printResult('[-]  User-supplied delay detected. Waiting %s seconds between HTTP requests.' % args.wait)
 
         if args.path_wordlists:
-            printResult('[-]  Custom wordlists file: %s' % args.path_wordlists)
-        else: args.path_wordlists = path_wordlists
+            printResult('[-]  Asigned wordlists file: %s' % args.path_wordlists)
+        else:
+            args.path_wordlists = path_wordlists
+            printResult('[-]  Wordlists file was not asigned, using: %s' % args.path_wordlists)
             
         if args.path_exts:
-            printResult('[-]  Custom extensions file: %s' % args.path_exts)
-        else: args.path_exts = path_exts
+            printResult('[-]  Asigned extensions file: %s' % args.path_exts)
+        else:
+            args.path_exts = path_exts
+            printResult('[-]  Extensions file was not asigned, using: %s' % args.path_exts)
         
         if args.path_exts_ignore:
-            printResult('[-]  Custom ignorable extensions file: %s' % args.path_exts_ignore)
-        else: args.path_exts_ignore = path_exts_ignore
+            printResult('[-]  Asigned ignorable extensions file: %s' % args.path_exts_ignore)
+        else:
+            args.path_exts_ignore = path_exts_ignore
+            printResult('[-]  Ignorable file was not asigned, using: %s' % args.path_exts_ignore)
             
         printResult('[+]  HTTP Response Codes: %s' % response_code, bcolors.PURPLE, 2)
 
