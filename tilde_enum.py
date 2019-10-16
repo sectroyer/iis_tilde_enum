@@ -374,13 +374,8 @@ def checkEightDotThreeEnum(url, check_string, dirname='/'):
 
 def confirmUrlExist(url, isFile=True):
     # Check if the given url is existed or not there
-<<<<<<< HEAD
     resp = getWebServerResponse(url)
     if resp.code != response_profile['not_there_code']:
-=======
-    resp = getWebServerResponse(url, method="GET")
-    if resp.code != response_code['not_there_code']:
->>>>>>> 65614ef2633d3d6f209b4c8c6c172e348cbb5ebf
         size = len(resp.read())
         if response_profile['not_there_code'] == 404:
             return True
@@ -545,19 +540,7 @@ def main():
         
     except KeyboardInterrupt:
         sys.exit()
-<<<<<<< HEAD
-
-    """ 
-    ## Test ##
-    addNewFindings(["descri~1.htm","testte~1.htm","s-t-o-~1.asp","indexc~1.asp"])
-    wordlistEnum(url_ok)
-    printFindings()
-    return
-    """
-
-=======
         
->>>>>>> 65614ef2633d3d6f209b4c8c6c172e348cbb5ebf
     try:
         # Do the initial search for files in the root of the web server
         checkEightDotThreeEnum(url.scheme + '://' + url.netloc, check_string, url.path)

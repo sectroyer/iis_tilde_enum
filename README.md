@@ -24,16 +24,17 @@ Always enjoy feedback and suggestions.
 
 Help
 ----
-<pre>$  ./tilde_enum.py -h
-usage: tilde_enum.py [-h] [-d PATH_WORDLISTS] [-e PATH_EXTS] [-f] [-g]
-                     [-o OUT_FILE] [-p PROXY] [-u URL] [-v VERBOSE_LEVEL]
-                     [-w WAIT] [--limit-ext LIMIT_EXTENSION]
-                     [--resume RESUME_STRING]
+<pre>$  python tilde_enum.py -h
+usage: tilde_enum.py [-h] [-c COOKIE] [-d PATH_WORDLISTS] [-e PATH_EXTS] [-f]
+                     [-g] [-o OUT_FILE] [-p PROXY] [-u URL] [-v VERBOSE_LEVEL]
+                     [-w WAIT] [--ignore-ext PATH_EXTS_IGNORE]
+                     [--limit-ext LIMIT_EXTENSION] [--resume RESUME_STRING]
 
 Exploits and expands the file names found from the tilde enumeration vuln
 
 optional arguments:
   -h, --help            show this help message and exit
+  -c COOKIE             Cookie Header value
   -d PATH_WORDLISTS     Path of wordlists file
   -e PATH_EXTS          Path of extensions file
   -f                    Force testing even if the server seems not vulnerable
@@ -43,6 +44,8 @@ optional arguments:
   -u URL                URL to scan
   -v VERBOSE_LEVEL      verbose level of output (0~2)
   -w WAIT               time in seconds to wait between requests
+  --ignore-ext PATH_EXTS_IGNORE
+                        Path of ignorable extensions file
   --limit-ext LIMIT_EXTENSION
                         Enumerate for given extension only
   --resume RESUME_STRING
