@@ -2,6 +2,7 @@
 asf
 avi
 bmp
+cs
 css
 doc
 flv

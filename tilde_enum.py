@@ -11,6 +11,7 @@ Fork from:  Micah Hoffman (@WebBreacher)
 
 import os
 import re
+import ssl
 import sys
 import json
 import ctypes
@@ -21,6 +22,15 @@ import argparse
 import itertools
 from urlparse import urlparse
 from time import sleep
+ssl._create_default_https_context = ssl._create_unverified_context
+"""
+[TODO]
+1.Detecting Listable Directory
+2.Mass URL as input
+3.Threading
+4.Existing detection by different extensions
+5.Support login Session (customized Cookie)
+"""
 
 #=================================================
 # Constants and Variables
@@ -51,7 +61,8 @@ exts_ignore = []
 chars = 'abcdefghijklmnopqrstuvwxyz1234567890-_()'
 
 # Response codes - user and error
-response_code = {}
+response_profile = {}
+response_profile['error'] = {}
 
 # Environment logs
 counter_requests = 0
@@ -168,32 +179,30 @@ def initialCheckUrl(url):
 
     if not_there_response.getcode():
         printResult('[-]    URLNotThere -> HTTP Code: %s, Response Length: %s' % (not_there_response.getcode(), not_there_response_content_length))
-        response_code['not_there_code'], response_code['not_there_length'] = not_there_response.getcode(), not_there_response_content_length
+        response_profile['not_there_code'], response_profile['not_there_length'] = not_there_response.getcode(), not_there_response_content_length
     else:
         printResult('[+]    URLNotThere -> HTTP Code: %s, Error Code: %s' % (not_there_response.code, not_there_response.reason))
-        response_code['not_there_code'], response_code['not_there_reason'] = not_there_response.code
+        response_profile['not_there_code'], response_profile['not_there_reason'] = not_there_response.code
 
     # Check if we didn't get a 404. This would indicate custom error messages or some redirection and will cause issues later.
-    if response_code['not_there_code'] != 404:
+    if response_profile['not_there_code'] != 404:
         printResult('[!]  FALSE POSITIVE ALERT: We may have a problem determining real responses since we did not get a 404 back.', bcolors.RED)
 
     # Now that we have the "definitely not there" page, check for one that should be there
     printResult('[-]  Testing with user-submitted %s' % url, bcolors.GREEN)
     url_response = getWebServerResponse(url)
     if url_response.getcode():
-        response_code['user_length'] = len(url_response.read())
-        response_code['user_code'] = url_response.getcode()
-        printResult('[-]    URLUser -> HTTP Code: %s, Response Length: %s' % (response_code['user_code'], response_code['user_length']))
+        response_profile['user_length'] = len(url_response.read())
+        response_profile['user_code'] = url_response.getcode()
+        printResult('[-]    URLUser -> HTTP Code: %s, Response Length: %s' % (response_profile['user_code'], response_profile['user_length']))
     else:
         printResult('[+]    URLUser -> HTTP Code: %s, Error Code: %s' % (url_response.code, url_response.reason))
-        response_code['user_code'], response_code['user_reason'] = url_response.code, url_response.reason
+        response_profile['user_code'], response_profile['user_reason'] = url_response.code, url_response.reason
 
     # Check if we got an HTTP response code of 200.
-    if response_code['user_code'] != 200:
+    if response_profile['user_code'] != 200:
         printResult('[!]  WARNING: We did not receive an HTTP response code 200 back with given url.', bcolors.RED)
         #sys.exit()
-    else:
-        return response_code
 
 def checkVulnerableString(url):
     # Set the default string to be IIS6.x
@@ -349,13 +358,15 @@ def checkEightDotThreeEnum(url, check_string, dirname='/'):
 def confirmUrlExist(url, isFile=True):
     # Check if the given url is existed or not there
     resp = getWebServerResponse(url)
-    if resp.code != response_code['not_there_code']:
+    if resp.code != response_profile['not_there_code']:
         size = len(resp.read())
-        if response_code['not_there_code'] == 404:
+        if response_profile['not_there_code'] == 404:
             return True
         elif not isFile and resp.code == 301:
             return True
-        elif size != response_code['not_there_length']:
+        elif isFile and resp.code == 500:
+            return True
+        elif size != response_profile['not_there_length']:
             return True
         else:
             printResult('[!]  Strange. Not sure if %s is existed.' % url, bcolors.YELLOW, 2)
@@ -459,7 +470,7 @@ def main():
         if args.url:
             if args.url[-1:] != '/':
                 args.url += '/'
-            response_code = initialCheckUrl(args.url)
+            initialCheckUrl(args.url)
         else:
             printResult('[!]  You need to enter a valid URL for us to test.', bcolors.RED)
             sys.exit()
@@ -496,7 +507,7 @@ def main():
             args.path_exts_ignore = path_exts_ignore
             printResult('[-]  Ignorable file was not asigned, using: %s' % args.path_exts_ignore)
             
-        printResult('[+]  HTTP Response Codes: %s' % response_code, bcolors.PURPLE, 2)
+        printResult('[+]  HTTP Response Codes: %s' % response_profile, bcolors.PURPLE, 2)
 
         # Check to see if the remote server is IIS and vulnerable to the Tilde issue
         check_string = checkVulnerableString(args.url)
@@ -512,14 +523,15 @@ def main():
         
     except KeyboardInterrupt:
         sys.exit()
-        
-#### Test ####
-##    addNewFindings(["descri~1.htm","testte~1.htm","s-t-o-~1.asp","indexc~1.asp"])
-##    wordlistEnum(url_ok)
-##    printFindings()
-##    return
-#### Test ####
-        
+
+    """ 
+    ## Test ##
+    addNewFindings(["descri~1.htm","testte~1.htm","s-t-o-~1.asp","indexc~1.asp"])
+    wordlistEnum(url_ok)
+    printFindings()
+    return
+    """
+
     try:
         # Do the initial search for files in the root of the web server
         checkEightDotThreeEnum(url.scheme + '://' + url.netloc, check_string, url.path)
@@ -548,6 +560,7 @@ def main():
 
 # Command Line Arguments
 parser = argparse.ArgumentParser(description='Exploits and expands the file names found from the tilde enumeration vuln')
+parser.add_argument('-c', dest='cookie', help='Cookie Header value')
 parser.add_argument('-d', dest='path_wordlists', help='Path of wordlists file')
 parser.add_argument('-e', dest='path_exts', help='Path of extensions file')
 parser.add_argument('-f', action='store_true', default=False, help='Force testing even if the server seems not vulnerable')
