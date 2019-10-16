@@ -1,4 +1,5 @@
 action
+asa
 asax
 ascx
 ashx
@@ -9,6 +10,8 @@ bak
 bat
 bzip
 cache
+cer
+cdx
 cfm
 cgi
 class
@@ -17,6 +20,7 @@ config
 cs
 cshtml
 csproj
+dtd
 dll
 do
 docx
@@ -28,6 +32,7 @@ ftxt
 gz
 gzip
 hosts
+hta
 htaccess
 htm
 html
@@ -48,6 +53,7 @@ jws
 lasso
 log
 master
+md
 mdb
 midi
 mime
@@ -58,6 +64,7 @@ old
 php
 php3
 php4
+php5
 phtml
 pipe
 pl
@@ -66,6 +73,8 @@ pptx
 profile
 proj
 properties
+pwml
+py
 rar
 reg
 rules
@@ -84,9 +93,12 @@ text
 txt
 vbproj
 vmdk
-xml
+wsdl
+xhtml
 xlsb
 xlsm
 xlsx
+xml
+xslt
 yaml
 zip
