@@ -264,26 +264,27 @@ def findExtensions(url, filename):
     possible_exts = {}
     found_files = []
     notFound = True
+    _filename = filename.replace("~","*~") # a quick fix to avoid strange response in enumeration
 
     if args.limit_extension:
         # We already know the extension, set notFound as False to ignore warnings
         notFound = False
-        resp = getWebServerResponse(url+filename+args.limit_extension+'*/.aspx')
+        resp = getWebServerResponse(url+_filename+args.limit_extension+'*/.aspx')
         if resp.code == 404:
             possible_exts[args.limit_extension[1:]] = 1
     elif not args.limit_extension == '':
         for char1 in chars:
-            resp1a = getWebServerResponse(url+filename+'*'+char1+'*/.aspx')
+            resp1a = getWebServerResponse(url+_filename+'*'+char1+'*/.aspx')
             if resp1a.code == 404:  # Got the first valid char
                 notFound = False
                 possible_exts[char1] = 1
                 for char2 in chars:
-                    resp2a = getWebServerResponse(url+filename+'*'+char1+char2+'*/.aspx')
+                    resp2a = getWebServerResponse(url+_filename+'*'+char1+char2+'*/.aspx')
                     if resp2a.code == 404:  # Got the second valid char
                         if char1 in possible_exts: del possible_exts[char1]
                         possible_exts[char1+char2] = 1
                         for char3 in chars:
-                            resp3a = getWebServerResponse(url+filename+'*'+char1+char2+char3+'/.aspx')
+                            resp3a = getWebServerResponse(url+_filename+'*'+char1+char2+char3+'/.aspx')
                             if resp3a.code == 404:  # Got the third valid char
                                 if char1+char2 in possible_exts: del possible_exts[char1+char2]
                                 possible_exts[char1+char2+char3] = 1
@@ -295,6 +296,7 @@ def findExtensions(url, filename):
         printResult('[+]  Enumerated directory:  ' +filename+'/', bcolors.YELLOW)
 
     if notFound:
+        addNewFindings([filename+'/'])
         printResult('[!]  Something is wrong:  %s%s/ should be a directory, but the response is strange.'%(url,filename), bcolors.RED)
     else:
         possible_exts = sorted(possible_exts.keys(), key=len, reverse=True)
@@ -374,7 +376,7 @@ def checkEightDotThreeEnum(url, check_string, dirname='/'):
 
 def confirmUrlExist(url, isFile=True):
     # Check if the given url is existed or not there
-    resp = getWebServerResponse(url)
+    resp = getWebServerResponse(url, method="GET")
     if resp.code != response_profile['not_there_code']:
         size = len(resp.read())
         if response_profile['not_there_code'] == 404:
@@ -540,7 +542,7 @@ def main():
         
     except KeyboardInterrupt:
         sys.exit()
-        
+
     try:
         # Do the initial search for files in the root of the web server
         checkEightDotThreeEnum(url.scheme + '://' + url.netloc, check_string, url.path)
