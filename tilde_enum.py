@@ -20,8 +20,10 @@ import string
 import urllib2
 import argparse
 import itertools
-from urlparse import urlparse
 from time import sleep
+from urlparse import urlparse
+from lib.getTerminalSize import getTerminalSize
+
 ssl._create_default_https_context = ssl._create_unverified_context
 """
 [TODO]
@@ -75,19 +77,22 @@ using_tail = "*~1*/.aspx"
 if os.name == "nt":
     std_out_handle = ctypes.windll.kernel32.GetStdHandle(-11)
 
+rows, columns = getTerminalSize()
+spacebar = " " * int(columns) + '\r'
+
 
 #=================================================
 # Functions & Classes
 #=================================================
 
-
 def printResult(msg, color='', level=1):
+    global spacebar
     # print and output to file.
     # level = 0 : Mute on screen
     # level = 1 : Important messages
     # level = 2 : More details
     if args.verbose_level >= level:
-        sys.stdout.write('\t\t\t\t\t\t\t\t\t\t\t\t\t\r')
+        sys.stdout.write(spacebar)
         sys.stdout.flush()
         if color:
             if os.name == "nt":
@@ -106,13 +111,14 @@ def printResult(msg, color='', level=1):
 
 def getWebServerResponse(url, method=False):
     # This function takes in a URL and outputs the HTTP response code and content length (or error)
-    global counter_requests, using_method
+    global spacebar, counter_requests, using_method
     
     method = method if method is not False else using_method
     
     try:
         if args.verbose_level:
-            sys.stdout.write("[*]  Testing: %s \t\t\r" % url)
+            sys.stdout.write(spacebar)
+            sys.stdout.write("[*]  Testing: %s \r" % url)
             sys.stdout.flush()
         sleep(args.wait)
         
