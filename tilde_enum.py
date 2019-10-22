@@ -77,8 +77,8 @@ using_tail = "*~1*/.aspx"
 if os.name == "nt":
     std_out_handle = ctypes.windll.kernel32.GetStdHandle(-11)
 
-rows, columns = getTerminalSize()
-spacebar = " " * int(columns) + '\r'
+columns, rows = getTerminalSize()
+spacebar = " " * columns + '\r'
 
 
 #=================================================
@@ -109,6 +109,16 @@ def printResult(msg, color='', level=1):
             f.write(msg + '\n')
             f.close()
 
+def errorHandler(errorMsg="", forcePrint=True, forceExit=False):
+    printResult('[!]  ' + errorMsg, bcolors.RED)
+    printResult('[-] Paused! Do you want to exit? (y/N):')
+    ans = raw_input()
+    if ans.lower() == 'y':
+        if forcePrint: printFindings()
+        sys.exit()
+    else:
+        return
+
 def getWebServerResponse(url, method=False):
     # This function takes in a URL and outputs the HTTP response code and content length (or error)
     global spacebar, counter_requests, using_method
@@ -131,13 +141,11 @@ def getWebServerResponse(url, method=False):
         #ignore HTTPError (404, 400 etc)
         return e
     except urllib2.URLError as e:
-        printResult('[!]  Connection URLError: ' + str(e.reason), bcolors.RED)
-        printFindings()
-        sys.exit()
+        errorHandler('Connection URLError: ' + str(e.reason))
+        return getWebServerResponse(url, method)
     except Exception as e:
-        printResult('[!]  Connection Error: Unkown', bcolors.RED)
-        printFindings()
-        sys.exit()
+        errorHandler('Connection Error: Unknown')
+        return getWebServerResponse(url, method)
 
 def getGoogleKeywords(prefix):
     try:
