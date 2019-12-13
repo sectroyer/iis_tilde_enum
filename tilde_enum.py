@@ -41,7 +41,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 # In the 'headers' below, change the data that you want sent to the remote server
 # This is an IE10 user agent
 headers = {'User-Agent': 'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0)'}
-methods = ["OPTIONS","GET","POST","HEAD","TRACE","TRACK","DEBUG"]
+methods = ["GET","POST","OPTIONS","HEAD","TRACE","TRACK","DEBUG"]
 tails = ["\\a.asp","/a.asp","\\a.aspx","/a.aspx","/a.shtml","/a.asmx","/a.ashx","/a.config","/a.php","/a.jpg","","/a.xxx"]
 
 # Targets is the list of files from the scanner output
