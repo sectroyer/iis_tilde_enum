@@ -17,11 +17,11 @@ import json
 import ctypes
 import random
 import string
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import argparse
 import itertools
 from time import sleep
-from urlparse import urlparse
+from urllib.parse import urlparse
 from lib.getTerminalSize import getTerminalSize
 
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -97,12 +97,12 @@ def printResult(msg, color='', level=1):
         if color:
             if os.name == "nt":
                 ctypes.windll.kernel32.SetConsoleTextAttribute(std_out_handle, color)
-                print msg
+                print(msg)
                 ctypes.windll.kernel32.SetConsoleTextAttribute(std_out_handle, bcolors.ENDC)
             else:
-                print color + msg + bcolors.ENDC
+                print(color + msg + bcolors.ENDC)
         else:
-            print msg
+            print(msg)
     if args.out_file:
         if args.verbose_level >= level or level == 1:
             f = open(args.out_file, 'a+')
@@ -112,7 +112,7 @@ def printResult(msg, color='', level=1):
 def errorHandler(errorMsg="", forcePrint=True, forceExit=False):
     printResult('[!]  ' + errorMsg, bcolors.RED)
     printResult('[-] Paused! Do you want to exit? (y/N):')
-    ans = raw_input()
+    ans = input()
     if ans.lower() == 'y':
         if forcePrint: printFindings()
         sys.exit()
@@ -133,14 +133,14 @@ def getWebServerResponse(url, method=False):
         sleep(args.wait)
         
         counter_requests += 1
-        req = urllib2.Request(url, None, headers)
+        req = urllib.request.Request(url, None, headers)
         req.get_method = lambda: method
-        response = urllib2.urlopen(req)
+        response = urllib.request.urlopen(req)
         return response
-    except urllib2.HTTPError as e:
+    except urllib.error.HTTPError as e:
         #ignore HTTPError (404, 400 etc)
         return e
-    except urllib2.URLError as e:
+    except urllib.error.URLError as e:
         errorHandler('Connection URLError: ' + str(e.reason))
         return getWebServerResponse(url, method)
     except Exception as e:
@@ -149,8 +149,8 @@ def getWebServerResponse(url, method=False):
 
 def getGoogleKeywords(prefix):
     try:
-        req = urllib2.Request('http://suggestqueries.google.com/complete/search?q=%s&client=firefox&hl=en'% prefix)
-        resp = urllib2.urlopen(req)
+        req = urllib.request.Request('http://suggestqueries.google.com/complete/search?q=%s&client=firefox&hl=en'% prefix)
+        resp = urllib.request.urlopen(req)
         result_resp = json.loads(resp.read())
         result = []
         for word in result_resp[1]:
@@ -160,7 +160,7 @@ def getGoogleKeywords(prefix):
             if len(keywords):
                 result.append("".join(keywords))
         return list(set(result))
-    except urllib2.URLError as e:
+    except urllib.error.URLError as e:
         printResult('[!]  There is an error when retrieving keywords from Google: %s, skipped' % str(e.reason), bcolors.RED)
         return []
     except Exception as e:
@@ -238,7 +238,7 @@ def checkVulnerable(url):
         return check_string
 
     server_header = getWebServerResponse(url)
-    if server_header.headers.has_key('server'):
+    if 'server' in server_header.headers:
         if 'IIS' in server_header.headers['server'] or 'icrosoft' in server_header.headers['server']:
             printResult('[+]  The server is reporting that it is IIS (%s).' % server_header.headers['server'], bcolors.GREEN)
             if   '5.' in server_header.headers['server']:
@@ -313,10 +313,10 @@ def findExtensions(url, filename):
         addNewFindings([filename+'/'])
         printResult('[!]  Something is wrong:  %s%s/ should be a directory, but the response is strange.'%(url,filename), bcolors.RED)
     else:
-        possible_exts = sorted(possible_exts.keys(), key=len, reverse=True)
+        possible_exts = sorted(list(possible_exts.keys()), key=len, reverse=True)
         while possible_exts:
             item = possible_exts.pop()
-            if not any(map(lambda s:s.endswith(item), possible_exts)):
+            if not any([s.endswith(item) for s in possible_exts]):
                 printResult('[+]  Enumerated file:  ' +filename+'.'+item, bcolors.YELLOW)
                 found_files.append(filename+'.'+item)
         addNewFindings(found_files)
@@ -333,7 +333,7 @@ def counterEnum(url, check_string, found_name):
     # Enumerate ~2 ~3 and so on
     foundNameWithCounter = [found_name+'~1']
     lastCounter = 1
-    for i in xrange(2, 10):
+    for i in range(2, 10):
         test_name = '%s~%d' % (found_name, i)
         test_url = url + test_name + '*/.aspx'
         resp = getWebServerResponse(test_url)
@@ -647,9 +647,9 @@ else:
 
 if args.proxy:
     printResult('[-]  Using proxy for requests: ' + args.proxy, bcolors.PURPLE)
-    proxy = urllib2.ProxyHandler({'http': args.proxy, 'https': args.proxy})
-    opener = urllib2.build_opener(proxy)
-    urllib2.install_opener(opener)
+    proxy = urllib.request.ProxyHandler({'http': args.proxy, 'https': args.proxy})
+    opener = urllib.request.build_opener(proxy)
+    urllib.request.install_opener(opener)
 
 if args.verbose_level > 1:
     printResult('[-]  Verbose Level=%d ....brace yourself for additional information.'%args.verbose_level, bcolors.PURPLE, 2)
