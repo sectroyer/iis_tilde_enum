@@ -12,6 +12,8 @@ Fork from:  Micah Hoffman (@WebBreacher)
 import os
 import re
 import ssl
+import socks
+import socket
 import sys
 import json
 import ctypes
@@ -72,6 +74,9 @@ response_profile['error'] = {}
 counter_requests = 0
 using_method = "GET"
 using_tail = "*~1*/.aspx"
+
+# SOCKS proxy
+socks_proxy_ctx=False
 
 # Terminal handler for Windows
 if os.name == "nt":
@@ -485,13 +490,13 @@ def printFindings():
             for finding in sorted(findings_ignore):
                 printResult(args.url + finding)
             
-        printResult('\n[+] Existing files found: %s'% (len(findings_file) if findings_file else 'None.'))
+        printResult('\n[+] Existing files found: %s'% (len(findings_file) if findings_file else 'None.'), bcolors.PURPLE)
         for finding in sorted(findings_file):
-            printResult(args.url + finding)
+            printResult(args.url + finding, bcolors.GREEN)
             
-        printResult('\n[+] Existing Directories found: %s'% (len(findings_dir) if findings_dir else 'None.'))
+        printResult('\n[+] Existing Directories found: %s'% (len(findings_dir) if findings_dir else 'None.'), bcolors.PURPLE)
         for finding in sorted(findings_dir):
-            printResult(args.url + finding)
+            printResult(args.url + finding, bcolors.GREEN)
         printResult('---------- OUTPUT COMPLETE ---------------------------\n\n\n')
     else:
         printResult('[!]  No Result Found!\n\n\n', bcolors.RED)
@@ -592,6 +597,7 @@ parser.add_argument('-f', action='store_true', default=False, help='Force testin
 parser.add_argument('-g', action='store_true', default=False, dest='enable_google', help='Enable Google keyword suggestion to enhance wordlists')
 parser.add_argument('-o', dest='out_file',default='', help='Filename to store output')
 parser.add_argument('-p', dest='proxy',default='', help='Use a proxy host:port')
+parser.add_argument('-s', dest='socks_proxy',default='', help='Use a socks proxy host:port')
 parser.add_argument('-u', dest='url', help='URL to scan')
 parser.add_argument('-v', dest='verbose_level', type=int, default=1, help='verbose level of output (0~2)')
 parser.add_argument('-w', dest='wait', default=0, type=float, help='time in seconds to wait between requests')
@@ -650,6 +656,15 @@ if args.proxy:
     proxy = urllib.request.ProxyHandler({'http': args.proxy, 'https': args.proxy})
     opener = urllib.request.build_opener(proxy)
     urllib.request.install_opener(opener)
+
+if args.socks_proxy:
+    printResult('[-]  Using socks proxy for requests: ' + args.socks_proxy, bcolors.PURPLE)
+    socks_host, socks_port = args.socks_proxy.split(":")
+    socks_port = int(socks_port)
+
+    # Configure the SOCKS proxy
+    socks.set_default_proxy(socks.SOCKS5, socks_host, socks_port)
+    socket.socket = socks.socksocket  # Override the default socket
 
 if args.verbose_level > 1:
     printResult('[-]  Verbose Level=%d ....brace yourself for additional information.'%args.verbose_level, bcolors.PURPLE, 2)
